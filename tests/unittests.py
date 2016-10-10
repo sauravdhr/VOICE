@@ -6,6 +6,11 @@ SEQS_2 = ["AAA", "AAB"]
 SEQS_3 = ["AAA", "AAB", "AAA"]
 SEQS_4 = ["AAA", "AAB", "AAA", "AAB"]
 MATRIX = [21, 31, 32, 41, 42, 43, 51, 52, 53, 54]
+MATRIX_FULL = [[0, 21, 31, 41, 51],
+               [21, 0, 32, 42, 52],
+               [31, 32, 0, 43, 53],
+               [41, 42, 43, 0, 54],
+               [51, 52, 53, 54, 0]]
 
 
 class Test(unittest.TestCase):
@@ -33,3 +38,4 @@ class TriangleMatrixTest(unittest.TestCase):
         self.assertEqual(main.SymMatrixWithoutDiagonal(MATRIX)[2, 1], 32)
         self.assertEqual(main.SymMatrixWithoutDiagonal(MATRIX)[1, 2], 32)
         self.assertEqual(main.SymMatrixWithoutDiagonal(MATRIX)[2, 2], 0)
+        self.assertEqual([[e for e in r] for r in main.SymMatrixWithoutDiagonal(MATRIX)], MATRIX_FULL)
