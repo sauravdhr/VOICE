@@ -3,7 +3,9 @@ from Bio import SeqIO
 import itertools
 import math
 
-FASTA = "data/AC122_unique_1a_48.fas"
+#FASTA = "data/AC122_unique_1a_48.fas"
+FASTA = "data/AA45_unique_1b_161.fas"
+MAX_DIST = 5
 
 
 class SymMatrixWithoutDiagonal(object):
@@ -81,10 +83,54 @@ def get_sequences_distance_matrix(sequences):
         list(range(1, len(sequences)))))))
 
 
+def get_median(vector1, vector2, vector3):
+    median = ""
+    for ch1, ch2, ch3 in zip(vector1, vector2, vector3):
+        if ch1 == ch2 or ch1 == ch3:
+            median += ch1
+        elif ch2 == ch3:
+            median += ch2
+        else:
+            return None
+    return median
+
+
+def find_all_medians(sequences):
+        medians = []
+        n = len(sequences)
+        for i in range(n-2):
+            for j in range(i+1, n-1):
+                for k in range(j+1, n):
+                    median = get_median(sequences[i], sequences[j], sequences[k])
+                    if median:
+                        medians.append(median)
+        return filter_repeated_sequences(medians)
+
+
+def find_medians_for_similar_sequences(sequences, max_dist):
+    distance_matrix = get_sequences_distance_matrix(sequences)
+#    for item in distance_matrix:
+#            print(', '.join(map(str, item[:])))
+
+    similar_sequences = []
+    for i in range(len(sequences)):
+        similar_sequences_acc = []
+        for j in range(i, len(sequences)):
+            if distance_matrix[i, j] <= max_dist:
+                similar_sequences_acc.append(sequences[j])
+        if len(similar_sequences_acc) <= 2:
+            continue
+        similar_sequences.append(similar_sequences_acc)
+    medians = []
+    for seqs in similar_sequences:
+        medians += find_all_medians(seqs)
+    return filter_repeated_sequences(medians)
+
+
 class Graph(object):
     def __init__(self, fasta):
         self.sequences = self.parse_fasta(fasta)
-        self.vertices = self.infer_vertices(self.sequences)
+        self.vertices = self.infer_vertices(self.sequences, MAX_DIST)
 
     @staticmethod
     def parse_fasta(fasta):
@@ -93,9 +139,20 @@ class Graph(object):
             seqs.append(str(seq_record.seq))
         return seqs
 
-    def infer_vertices(self, sequences):
-        filtered_sequences = filter_repeated_sequences(sequences)
-        distance_matrix = get_sequences_distance_matrix(filtered_sequences)
+    @staticmethod
+    def infer_vertices(sequences, max_dist):
+        medians = sequences[:]
+        old_n = 0
+        new_n = len(medians)
+        while True:
+            medians += find_medians_for_similar_sequences(medians[old_n:new_n], max_dist)
+            medians = filter_repeated_sequences(medians)
+            old_n = new_n
+            new_n = len(medians)
+            if old_n == new_n:
+                break
+            print(new_n - old_n)
+        distance_matrix = get_sequences_distance_matrix(medians)
         for item in distance_matrix:
             print(', '.join(map(str, item[:])))
         return 0

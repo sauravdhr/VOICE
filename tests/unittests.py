@@ -5,6 +5,10 @@ SEQS_1 = ["AAA", "AAA"]
 SEQS_2 = ["AAA", "AAB"]
 SEQS_3 = ["AAA", "AAB", "AAA"]
 SEQS_4 = ["AAA", "AAB", "AAA", "AAB"]
+SEQS_5 = ["AA", "AB", "AC"]
+SEQS_6 = ["AAA", "ABA", "ABB"]
+SEQS_7 = ["AAA", "AAB", "AAA", "AAB", "AAC"]
+SEQS_8 = ["BAB", "AAB", "BAC", "ACB", "AAC"]
 MATRIX = [21, 31, 32, 41, 42, 43, 51, 52, 53, 54]
 MATRIX_FULL = [[0, 21, 31, 41, 51],
                [21, 0, 32, 42, 52],
@@ -39,3 +43,12 @@ class TriangleMatrixTest(unittest.TestCase):
         self.assertEqual(main.SymMatrixWithoutDiagonal(MATRIX)[1, 2], 32)
         self.assertEqual(main.SymMatrixWithoutDiagonal(MATRIX)[2, 2], 0)
         self.assertEqual([[e for e in r] for r in main.SymMatrixWithoutDiagonal(MATRIX)], MATRIX_FULL)
+
+
+class MediansCreationTest(unittest.TestCase):
+    def test(self):
+        self.assertEqual(main.find_all_medians(SEQS_5), [])
+        self.assertEqual(main.find_all_medians(SEQS_6), ["ABA"])
+        self.assertEqual(main.find_all_medians(SEQS_4), ["AAA", "AAB"])
+        self.assertEqual(main.find_all_medians(SEQS_7), ["AAA", "AAB"])
+        self.assertEqual(main.find_all_medians(SEQS_8), ["BAB", "AAB", "BAC", "AAC"])
