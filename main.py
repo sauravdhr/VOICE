@@ -2,10 +2,13 @@
 from Bio import SeqIO
 import itertools
 import math
+import copy
+from graphviz import Digraph
 
 #FASTA = "data/AC122_unique_1a_48.fas"
 FASTA = "data/AA45_unique_1b_161.fas"
 MAX_DIST = 5
+MAX_EDGE_LENGTH = 6
 
 
 class SymMatrixWithoutDiagonal(object):
@@ -127,10 +130,21 @@ def find_medians_for_similar_sequences(sequences, max_dist):
     return filter_repeated_sequences(medians)
 
 
-class Graph(object):
+class SequencesNetworkCreator(object):
+    PROBABILITY_TO_STAY = 0.38
+
     def __init__(self, fasta):
         self.sequences = self.parse_fasta(fasta)
         self.vertices = self.infer_vertices(self.sequences, MAX_DIST)
+        self.sequences_distance_matrix = get_sequences_distance_matrix(self.vertices)
+        self.reciprocal_distance_matrix = self.get_reciprocal_distance_matrix()
+        self.propagation_network = self.construct_propagation_network(self.reciprocal_distance_matrix, MAX_EDGE_LENGTH)
+
+    def get_reciprocal_distance_matrix(self):
+        reciprocal_distance_matrix = copy.deepcopy(self.sequences_distance_matrix)
+        for i in range(len(reciprocal_distance_matrix.vector)):
+            reciprocal_distance_matrix.vector[i] = 1/reciprocal_distance_matrix.vector[i]
+        return reciprocal_distance_matrix
 
     @staticmethod
     def parse_fasta(fasta):
@@ -152,14 +166,47 @@ class Graph(object):
             if old_n == new_n:
                 break
             print(new_n - old_n)
-        distance_matrix = get_sequences_distance_matrix(medians)
-        for item in distance_matrix:
-            print(', '.join(map(str, item[:])))
-        return 0
+        return medians
+
+    def construct_propagation_network(self, distance_matrix, max_dist):
+        network = list()
+        for vertex_ind in range(self.vertices):
+            _, sum_weight_of_edges = self.get_info_about_adj_edges(distance_matrix, vertex_ind, max_dist)
+            prob_move_to_distant_vertix = (1 - self.PROBABILITY_TO_STAY)/sum_weight_of_edges
+            edges = list()
+            edges.append((vertex_ind, self.PROBABILITY_TO_STAY))
+            for adj_vertex_ind in range(self.vertices):
+                d = distance_matrix[vertex_ind, adj_vertex_ind]
+                if 1 <= d <= max_dist:
+                    edges.append((adj_vertex_ind, prob_move_to_distant_vertix * d))
+            network.append(edges)
+        return network
+
+    def get_info_about_adj_edges(self, distance_matrix, vertex_ind, max_dist):
+        adjacent_vertices_count = 0
+        sum_weight_of_edges = 0
+        for j in range(self.vertices):
+            d = distance_matrix[vertex_ind, j]
+            if 1 <= d <= max_dist:
+                adjacent_vertices_count += 1
+                sum_weight_of_edges += d
+        return adjacent_vertices_count, sum_weight_of_edges
+
+
+def export_graph_to_dot(graph, file_name):
+    dot = Digraph()
+    for i in range(len(graph)):
+        dot.node(str(i))
+    for v1, edges in enumerate(graph):
+        for v2 in edges:
+            dot.edge(str(v1), str(v2[0]))
+    with open(file_name, 'w') as f:
+        f.write(dot.source)
 
 
 def main(fasta):
-    graph = Graph(fasta)
+    graph = SequencesNetworkCreator(fasta)
+    export_graph_to_dot(graph.propagation_network, "test.dot")
 
 if __name__ == "__main__":
     main(FASTA)
