@@ -53,7 +53,7 @@ class MatrixIterator(object):
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def next(self):
         if self.i < self.matrix.n:
             self.i += 1
             return self.matrix.get_row(self.i-1)

@@ -7,6 +7,7 @@ Created on Thu Oct 01 10:24:10 2015
 
 '''
 # prints a list of all fileNAMES (NOT contents) in the folder
+
 import glob, os
 os.chdir("data")
 combined = ""
