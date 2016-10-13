@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 from Bio import SeqIO
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree
+
 import itertools
 import math
 import copy
@@ -178,17 +181,18 @@ class SequencesNetworkCreator(object):
 
     @staticmethod
     def get_minimal_connected_graph_matrix(distance_matrix):
+        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
+        min_length = max([max(e) for e in mst.toarray().astype(int)])
+        print(min_length)
         minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
-        min_edges = []
-        for row in minimal_connected_graph_matrix:
-            min_edges.append(min([e for e in row if e != 0]))
-        min_length = max(min_edges)
+#        min_edges = []
+#        for row in minimal_connected_graph_matrix:
+#            min_edges.append(min([e for e in row if e != 0]))
+#        min_length = max(min_edges)
         for i, row in enumerate(minimal_connected_graph_matrix):
             for j, length in enumerate(row):
                 if length and length > min_length:
                     minimal_connected_graph_matrix[i, j] = None
-#        for item in minimal_connected_graph_matrix:
-#            print(', '.join(map(str, item[:])))
         return minimal_connected_graph_matrix
 
     def construct_propagation_network(self, distance_matrix):
@@ -201,7 +205,7 @@ class SequencesNetworkCreator(object):
                 prob_move_to_distant_vertex = (1 - self.PROBABILITY_TO_STAY)/sum_weight_of_edges
                 for adj_vertex_ind in range(len(self.vertices)):
                     d = distance_matrix[vertex_ind, adj_vertex_ind]
-                    if d is not None:
+                    if d is not None and d != 0:
                         edges.append((adj_vertex_ind, prob_move_to_distant_vertex * d))
             network.append(edges)
         return network
@@ -225,8 +229,8 @@ def export_graph_to_dot(graph, file_name):
         dot.node(str(v))
     for v1 in range(len(graph)):
         for (v2, weight) in graph[v1]:
-            dot.edge(str(v1), str(v2))
-#            dot.edge(str(v1), str(v2), weight=str(weight))
+#            dot.edge(str(v1), str(v2))
+            dot.edge(str(v1), str(v2), weight=str(weight))
     with open(file_name, 'w') as f:
         f.write(dot.source)
 
