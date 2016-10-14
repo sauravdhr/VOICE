@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 from Bio import SeqIO
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
@@ -146,9 +147,10 @@ def find_medians_for_similar_sequences(sequences, max_dist):
 class SequencesNetworkCreator(object):
     PROBABILITY_TO_STAY = 0.38
 
-    def __init__(self, fasta):
-        self.sequences = filter_repeated_sequences(self.parse_fasta(fasta))
-        self.vertices = self.infer_vertices(self.sequences, MAX_DIST)
+    def __init__(self, fasta1, fasta2, max_dist_for_median_triple):
+        self.sequences1 = filter_repeated_sequences(self.parse_fasta(fasta1))
+        self.sequences2 = filter_repeated_sequences(self.parse_fasta(fasta2))
+        self.vertices = self.infer_vertices(self.sequences1, self.sequences2, max_dist_for_median_triple)
         self.sequences_distance_matrix = get_sequences_distance_matrix(self.vertices)
         self.minimal_connected_graph_matrix = self.get_minimal_connected_graph_matrix(self.sequences_distance_matrix)
         self.network_matrix = self.get_reciprocal_distance_matrix(self.minimal_connected_graph_matrix)
@@ -170,19 +172,20 @@ class SequencesNetworkCreator(object):
         return seqs
 
     @staticmethod
-    def infer_vertices(sequences, max_dist):
-        medians = sequences[:]
+    def infer_vertices(sequences1, sequences2, max_dist):
+        common_sequences = filter_repeated_sequences(sequences1 + sequences2)
+        vertices = common_sequences[:]
         old_n = 0
-        new_n = len(medians)
+        new_n = len(vertices)
         while True:
-            medians += find_medians_for_similar_sequences(medians[old_n:new_n], max_dist)
-            medians = filter_repeated_sequences(medians)
+            vertices += find_medians_for_similar_sequences(vertices[old_n:new_n], max_dist)
+            vertices = filter_repeated_sequences(vertices)
             old_n = new_n
-            new_n = len(medians)
+            new_n = len(vertices)
             if old_n == new_n:
                 break
             print(new_n - old_n)
-        return medians
+        return vertices
 
     @staticmethod
     def get_minimal_connected_graph_matrix(distance_matrix):
@@ -252,13 +255,17 @@ def export_graph_to_json(graph, file_name):
         json.dump(data, f)
 
 
-def main(fasta):
-    graph = SequencesNetworkCreator(fasta)
-    f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(FASTA))[0] + '_' + str(MAX_DIST))
+def main(fasta1, fasta2, max_dist_for_median_triple):
+    graph = SequencesNetworkCreator(fasta1, fasta2, max_dist_for_median_triple)
+    f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(fasta1))[0] + '_vs_'
+                     + os.path.splitext(os.path.basename(fasta1))[0] + '_' + str(max_dist_for_median_triple))
     out_file_json = f + '.json'
     out_file_dot = f + '.dot'
     export_graph_to_dot(graph.propagation_network, out_file_dot)
     export_graph_to_json(graph.propagation_network, out_file_json)
 
 if __name__ == "__main__":
-    main(FASTA)
+    fasta1 = sys.argv[1]
+    fasta2 = sys.argv[2]
+    max_dist_for_triple_mean = int(sys.argv[3])
+    main(fasta1, fasta2, max_dist_for_triple_mean)
