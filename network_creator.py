@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 from Bio import SeqIO
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
@@ -7,7 +8,11 @@ import itertools
 import math
 import copy
 from graphviz import Digraph
+import networkx as nx
+from networkx.readwrite import json_graph
+import json
 
+OUT_DIR = "out/graphs"
 #FASTA = "data/AC122_unique_1a_48.fas"
 FASTA = "data/AA45_unique_1b_161.fas"
 #FASTA = "data/examples.fas"
@@ -235,9 +240,25 @@ def export_graph_to_dot(graph, file_name):
         f.write(dot.source)
 
 
+def export_graph_to_json(graph, file_name):
+    g = nx.DiGraph()
+    for v in range(len(graph)):
+        g.add_node(v)
+    for v1 in range(len(graph)):
+        for (v2, weight) in graph[v1]:
+            g.add_edge(v1, v2, weight=weight)
+    data = json_graph.adjacency_data(g)
+    with open(file_name, 'w') as f:
+        json.dump(data, f)
+
+
 def main(fasta):
     graph = SequencesNetworkCreator(fasta)
-    export_graph_to_dot(graph.propagation_network, "AA45_unique_1b_161_4.dot")
+    f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(FASTA))[0] + '_' + str(MAX_DIST))
+    out_file_json = f + '.json'
+    out_file_dot = f + '.dot'
+    export_graph_to_dot(graph.propagation_network, out_file_dot)
+    export_graph_to_json(graph.propagation_network, out_file_json)
 
 if __name__ == "__main__":
     main(FASTA)
