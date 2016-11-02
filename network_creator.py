@@ -94,7 +94,12 @@ def filter_repeated_sequences(sequences):
                         list(range(1, len(sequences))))))
 
 
-def get_sequences_distance_matrix(sequences):
+def get_sequence_sets_difference(sequences1, sequences2):
+    return list(sequences1[i] for i in list(
+        filter(lambda i: not(True in map(lambda s2: sequences1[i] == s2, sequences2)), list(range(len(sequences1))))))
+
+
+def infer_distance_matrix(sequences):
     return SymMatrixWithoutDiagonal(list(itertools.chain.from_iterable(map(
         lambda i: list(map(
             lambda s2: hamming_distance(sequences[i], s2),
@@ -127,7 +132,7 @@ def find_all_medians(sequences):
 
 
 def find_medians_for_similar_sequences(sequences, max_dist):
-    distance_matrix = get_sequences_distance_matrix(sequences)
+    distance_matrix = infer_distance_matrix(sequences)
 
     similar_sequences = []
     for i in range(len(sequences)):
@@ -145,24 +150,27 @@ def find_medians_for_similar_sequences(sequences, max_dist):
 
 
 class SequencesNetworkCreator(object):
-    PROBABILITY_TO_STAY = 0.38
+    MIN_SEQS_DIST_THRESHOLD = 6
+    MAX_DIST_FOR_MEDIANS = 8
 
-    def __init__(self, fasta1, fasta2, max_dist_for_median_triple):
-        self.sequences1 = filter_repeated_sequences(self.parse_fasta(fasta1))
-        self.sequences2 = filter_repeated_sequences(self.parse_fasta(fasta2))
-        self.vertices = self.infer_vertices(self.sequences1, self.sequences2, max_dist_for_median_triple)
-        self.sequences_distance_matrix = get_sequences_distance_matrix(self.vertices)
-        self.minimal_connected_graph_matrix = self.get_minimal_connected_graph_matrix(self.sequences_distance_matrix)
-        self.network_matrix = self.get_reciprocal_distance_matrix(self.minimal_connected_graph_matrix)
-        self.propagation_network = self.construct_propagation_network(self.network_matrix)
+    def __init__(self, fasta, max_dist_for_medians):
+        self.max_dist_for_medians = max_dist_for_medians
+        self.sequences = filter_repeated_sequences(self.parse_fasta(fasta))
+        self.medians = self.infer_medians(self.sequences, self.max_dist_for_medians)
+        self.distance_matrix = infer_distance_matrix(self.medians + self.sequences)
+        self.minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(
+            self.distance_matrix)
 
-    @staticmethod
-    def get_reciprocal_distance_matrix(distance_matrix):
-        reciprocal_distance_matrix = copy.deepcopy(distance_matrix)
-        for i in range(len(reciprocal_distance_matrix.vector)):
-            if reciprocal_distance_matrix.vector[i]:
-                reciprocal_distance_matrix.vector[i] = 1/reciprocal_distance_matrix.vector[i]
-        return reciprocal_distance_matrix
+    def get_minimal_connected_graph(self):
+        graph = list()
+        for vertex_ind in range(len(self.sequences + self.medians)):
+            edges = list()
+            for adj_vertex_ind in range(len(self.sequences + self.medians)):
+                d = self.minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
+                if d is not None and d != 0:
+                    edges.append((adj_vertex_ind, d))
+            graph.append(edges)
+        return graph
 
     @staticmethod
     def parse_fasta(fasta):
@@ -172,46 +180,57 @@ class SequencesNetworkCreator(object):
         return seqs
 
     @staticmethod
-    def infer_vertices(sequences1, sequences2, max_dist):
-        common_sequences = filter_repeated_sequences(sequences1 + sequences2)
-        vertices = common_sequences[:]
+    def infer_medians(sequences, max_dist_for_medians):
+        filtered_sequences = filter_repeated_sequences(sequences)
+        medians = []
         old_n = 0
-        new_n = len(vertices)
+        new_n = 0
         while True:
-            vertices += find_medians_for_similar_sequences(vertices[old_n:new_n], max_dist)
-            vertices = filter_repeated_sequences(vertices)
+            medians += find_medians_for_similar_sequences(filtered_sequences + medians[old_n:new_n], max_dist_for_medians)
+            medians = get_sequence_sets_difference(filter_repeated_sequences(medians), filtered_sequences)
             old_n = new_n
-            new_n = len(vertices)
+            new_n = len(medians)
             if old_n == new_n:
                 break
             print(new_n - old_n)
-        return vertices
+        return medians
 
     @staticmethod
-    def get_minimal_connected_graph_matrix(distance_matrix):
+    def construct_minimal_connected_graph_matrix(distance_matrix):
         mst = minimum_spanning_tree(csr_matrix(distance_matrix))
-        min_length = max([max(e) for e in mst.toarray().astype(int)])
-        print(min_length)
+        min_length = max([max(e) for e in mst.toarray().astype(int)] + [SequencesNetworkCreator.MIN_SEQS_DIST_THRESHOLD])
         minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
-#        min_edges = []
-#        for row in minimal_connected_graph_matrix:
-#            min_edges.append(min([e for e in row if e != 0]))
-#        min_length = max(min_edges)
         for i, row in enumerate(minimal_connected_graph_matrix):
             for j, length in enumerate(row):
                 if length and length > min_length:
                     minimal_connected_graph_matrix[i, j] = None
         return minimal_connected_graph_matrix
 
+
+class PropagationNetworkCreator(object):
+    e = 0.01
+
+    @staticmethod
+    def loop_probability(L):
+        return (1-3*PropagationNetworkCreator.e)*L
+
+    def __init__(self, distance_graph):
+        self.distance_graph = distance_graph
+        self.L = L
+        self.c = self.loop_probability(self.L)
+        self.propagation_network = self.construct_propagation_network(
+            self.distance_graph.minimal_connected_graph_matrix)
+
     def construct_propagation_network(self, distance_matrix):
         network = list()
-        for vertex_ind in range(len(self.vertices)):
+        for vertex_ind in range(len(self.distance_graph.vertices)):
             adj_vertices_count, sum_weight_of_edges = self.get_info_about_adj_edges(distance_matrix, vertex_ind)
             edges = list()
-            edges.append((vertex_ind, self.PROBABILITY_TO_STAY))
+
+            edges.append((vertex_ind, self.c))
             if adj_vertices_count != 0:
-                prob_move_to_distant_vertex = (1 - self.PROBABILITY_TO_STAY)/sum_weight_of_edges
-                for adj_vertex_ind in range(len(self.vertices)):
+                prob_move_to_distant_vertex = (1 - self.c)/sum_weight_of_edges
+                for adj_vertex_ind in range(len(self.distance_graph.vertices)):
                     d = distance_matrix[vertex_ind, adj_vertex_ind]
                     if d is not None and d != 0:
                         edges.append((adj_vertex_ind, prob_move_to_distant_vertex * d))
@@ -221,7 +240,7 @@ class SequencesNetworkCreator(object):
     def get_info_about_adj_edges(self, distance_matrix, vertex_ind):
         adjacent_vertices_count = 0
         sum_weight_of_edges = 0
-        for j in range(len(self.vertices)):
+        for j in range(len(self.distance_graph.vertices)):
             d = distance_matrix[vertex_ind, j]
             if d is not None:
                 adjacent_vertices_count += 1
@@ -230,14 +249,11 @@ class SequencesNetworkCreator(object):
 
 
 def export_graph_to_dot(graph, file_name):
-#    for item in graph:
-#        print(', '.join(map(str, item[:])))
     dot = Digraph()
     for v in range(len(graph)):
         dot.node(str(v))
     for v1 in range(len(graph)):
         for (v2, weight) in graph[v1]:
-#            dot.edge(str(v1), str(v2))
             dot.edge(str(v1), str(v2), weight=str(weight))
     with open(file_name, 'w') as f:
         f.write(dot.source)
@@ -255,17 +271,17 @@ def export_graph_to_json(graph, file_name):
         json.dump(data, f)
 
 
-def main(fasta1, fasta2, max_dist_for_median_triple):
-    graph = SequencesNetworkCreator(fasta1, fasta2, max_dist_for_median_triple)
-    f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(fasta1))[0] + '_vs_'
-                     + os.path.splitext(os.path.basename(fasta1))[0] + '_' + str(max_dist_for_median_triple))
-    out_file_json = f + '.json'
-    out_file_dot = f + '.dot'
-    export_graph_to_dot(graph.propagation_network, out_file_dot)
-    export_graph_to_json(graph.propagation_network, out_file_json)
+def main(fastas, max_dist_for_median_triple):
+    graphs = [SequencesNetworkCreator(fasta, max_dist_for_median_triple) for fasta in fastas]
+    for i, graph in enumerate(graphs):
+        f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(fastas[i]))[0]
+                         + '_' + str(max_dist_for_median_triple))
+        out_file_json = f + '.json'
+        out_file_dot = f + '.dot'
+        export_graph_to_dot(graph.get_minimal_connected_graph(), out_file_dot)
+        export_graph_to_json(graph.get_minimal_connected_graph(), out_file_json)
 
 if __name__ == "__main__":
-    fasta1 = sys.argv[1]
-    fasta2 = sys.argv[2]
+    fastas = [sys.argv[1], sys.argv[2]]
     max_dist_for_triple_mean = int(sys.argv[3])
-    main(fasta1, fasta2, max_dist_for_triple_mean)
+    main(fastas, max_dist_for_triple_mean)
