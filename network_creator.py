@@ -4,6 +4,7 @@ import sys
 from Bio import SeqIO
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
+from enum import Enum
 
 import itertools
 import math
@@ -14,9 +15,6 @@ from networkx.readwrite import json_graph
 import json
 
 OUT_DIR = "out/graphs"
-#FASTA = "data/AC122_unique_1a_48.fas"
-FASTA = "data/AA45_unique_1b_161.fas"
-#FASTA = "data/examples.fas"
 MAX_DIST = 4
 
 
@@ -149,7 +147,19 @@ def find_medians_for_similar_sequences(sequences, max_dist):
     return filter_repeated_sequences(medians)
 
 
-class SequencesNetworkCreator(object):
+class Graph(object):
+    def __init__(self, vertices, edges):
+        self.vertices = vertices
+        self.edges = edges
+
+
+class VertexType(Enum):
+    original = 1
+    median = 2
+    compressed_hypercube = 3
+
+
+class DistanceGraphBuilder(object):
     MIN_SEQS_DIST_THRESHOLD = 6
     MAX_DIST_FOR_MEDIANS = 8
 
@@ -157,20 +167,25 @@ class SequencesNetworkCreator(object):
         self.max_dist_for_medians = max_dist_for_medians
         self.sequences = filter_repeated_sequences(self.parse_fasta(fasta))
         self.medians = self.infer_medians(self.sequences, self.max_dist_for_medians)
-        self.distance_matrix = infer_distance_matrix(self.medians + self.sequences)
+        self.vertices = self.infer_vertices()
+        self.distance_matrix = infer_distance_matrix(self.sequences + self.medians)
         self.minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(
             self.distance_matrix)
 
+    def infer_vertices(self):
+        return [{'sequence': s, 'type': VertexType.original} for s in self.sequences]\
+               + [{'sequence': m, 'type': VertexType.median} for m in self.medians]
+
     def get_minimal_connected_graph(self):
-        graph = list()
+        edges = list()
         for vertex_ind in range(len(self.sequences + self.medians)):
-            edges = list()
+            adjacent_vertices = list()
             for adj_vertex_ind in range(len(self.sequences + self.medians)):
                 d = self.minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
                 if d is not None and d != 0:
-                    edges.append((adj_vertex_ind, d))
-            graph.append(edges)
-        return graph
+                    adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
+            edges.append(adjacent_vertices)
+        return Graph(self.vertices, edges)
 
     @staticmethod
     def parse_fasta(fasta):
@@ -198,7 +213,7 @@ class SequencesNetworkCreator(object):
     @staticmethod
     def construct_minimal_connected_graph_matrix(distance_matrix):
         mst = minimum_spanning_tree(csr_matrix(distance_matrix))
-        min_length = max([max(e) for e in mst.toarray().astype(int)] + [SequencesNetworkCreator.MIN_SEQS_DIST_THRESHOLD])
+        min_length = max([max(e) for e in mst.toarray().astype(int)] + [DistanceGraphBuilder.MIN_SEQS_DIST_THRESHOLD])
         minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
         for i, row in enumerate(minimal_connected_graph_matrix):
             for j, length in enumerate(row):
@@ -207,79 +222,120 @@ class SequencesNetworkCreator(object):
         return minimal_connected_graph_matrix
 
 
-class PropagationNetworkCreator(object):
+class ProbabilityGraphBuilder(object):
     e = 0.01
+    s = e/(1-3*e)
+    min_edge_probability = 10e-6
 
     @staticmethod
     def loop_probability(L):
-        return (1-3*PropagationNetworkCreator.e)*L
+        return (1 - 3 * ProbabilityGraphBuilder.e) ** L
+
+    def edge_probability(self, m):
+        return self.c*self.s ** m
 
     def __init__(self, distance_graph):
         self.distance_graph = distance_graph
-        self.L = L
+        self.L = len(distance_graph.vertices[0]['sequence'])
         self.c = self.loop_probability(self.L)
-        self.propagation_network = self.construct_propagation_network(
-            self.distance_graph.minimal_connected_graph_matrix)
+        self.distance_graph_with_compressed_hypercubes = \
+            self.infer_distance_graph_with_compressed_hypercubes(self.distance_graph)
+        self.probability_graph = self.infer_probability_graph(self.distance_graph_with_compressed_hypercubes)
 
-    def construct_propagation_network(self, distance_matrix):
-        network = list()
-        for vertex_ind in range(len(self.distance_graph.vertices)):
-            adj_vertices_count, sum_weight_of_edges = self.get_info_about_adj_edges(distance_matrix, vertex_ind)
-            edges = list()
+    @staticmethod
+    def infer_distance_graph_with_compressed_hypercubes(distance_graph):
+        distance_graph_with_compressed_hypercubes = copy.deepcopy(distance_graph)
+        for u, adjacency_list in enumerate(distance_graph.edges):
+            for v, properties in adjacency_list:
+                if u < v and properties["weight"] > 1:
+                    ProbabilityGraphBuilder.add_edges_of_compressed_hypercube(distance_graph_with_compressed_hypercubes,
+                                                                              u, v, properties["weight"])
+        return distance_graph_with_compressed_hypercubes
 
-            edges.append((vertex_ind, self.c))
-            if adj_vertices_count != 0:
-                prob_move_to_distant_vertex = (1 - self.c)/sum_weight_of_edges
-                for adj_vertex_ind in range(len(self.distance_graph.vertices)):
-                    d = distance_matrix[vertex_ind, adj_vertex_ind]
-                    if d is not None and d != 0:
-                        edges.append((adj_vertex_ind, prob_move_to_distant_vertex * d))
-            network.append(edges)
-        return network
+    @staticmethod
+    def add_edges_of_compressed_hypercube(graph, u, v, weight):
+        count_of_vertices = len(graph.vertices)
+        for d in range(1, weight):
+            graph.vertices.append({'type': VertexType.compressed_hypercube})
+            graph.edges.append([(u, {'weight': d, 'multiplicity': weight}), (v, {'weight': weight-d, 'multiplicity': weight})])
+            graph.edges[u].append((count_of_vertices+d-1, {'weight': d, 'multiplicity': weight}))
+            graph.edges[v].append((count_of_vertices+d-1, {'weight': weight-d, 'multiplicity': weight}))
+        for v in range(count_of_vertices, count_of_vertices + weight - 2):
+            for u in range(v, count_of_vertices + weight - 1):
+                if v != u:
+                    graph.edges[v].append((u, {'weight': u-v, 'multiplicity': weight}))
+                    graph.edges[u].append((v, {'weight': u-v, 'multiplicity': weight}))
 
-    def get_info_about_adj_edges(self, distance_matrix, vertex_ind):
-        adjacent_vertices_count = 0
-        sum_weight_of_edges = 0
-        for j in range(len(self.distance_graph.vertices)):
-            d = distance_matrix[vertex_ind, j]
-            if d is not None:
-                adjacent_vertices_count += 1
-                sum_weight_of_edges += d
-        return adjacent_vertices_count, sum_weight_of_edges
-
-
-def export_graph_to_dot(graph, file_name):
-    dot = Digraph()
-    for v in range(len(graph)):
-        dot.node(str(v))
-    for v1 in range(len(graph)):
-        for (v2, weight) in graph[v1]:
-            dot.edge(str(v1), str(v2), weight=str(weight))
-    with open(file_name, 'w') as f:
-        f.write(dot.source)
+    def infer_probability_graph(self, distance_graph):
+        probability_graph = copy.deepcopy(distance_graph)
+        for u, adjacency_list in enumerate(distance_graph.edges):
+            probability_graph.edges[u] = []
+            for i, (v, properties) in enumerate(adjacency_list):
+                multiplicity = properties["multiplicity"] if 'multiplicity' in properties else 1
+                edge_probability = self.edge_probability(properties["weight"]) * multiplicity
+                if edge_probability >= self.min_edge_probability:
+                    probability_graph.edges[u].append((v, {"weight": edge_probability}))
+            probability_graph.edges[u].append((u, {"weight": self.c}))
+        return probability_graph
 
 
-def export_graph_to_json(graph, file_name):
-    g = nx.DiGraph()
-    for v in range(len(graph)):
-        g.add_node(v)
-    for v1 in range(len(graph)):
-        for (v2, weight) in graph[v1]:
-            g.add_edge(v1, v2, weight=weight)
-    data = json_graph.adjacency_data(g)
-    with open(file_name, 'w') as f:
-        json.dump(data, f)
+class GraphExporter(object):
+    @staticmethod
+    def export(graph, file_name):
+        pass
+
+    @staticmethod
+    def get_vertex_color(vertex_type):
+        if vertex_type == VertexType.original:
+            return 'red'
+        if vertex_type == VertexType.median:
+            return 'yellow'
+        if vertex_type == VertexType.compressed_hypercube:
+            return 'green'
+        return None
+
+
+class DotExporter(GraphExporter):
+    @staticmethod
+    def export(graph, file_name):
+        dot = Digraph()
+        for v in range(len(graph.vertices)):
+            label = graph.vertices[v]['sequence'] if 'sequence' in graph.vertices[v] else 'pool'
+            dot.node(str(v), label=label,
+                     color=super(JsonExporter, JsonExporter).get_vertex_color(graph.vertices[v]['type']))
+        for v1 in range(len(graph.edges)):
+            for (v2, properties) in graph.edges[v1]:
+                dot.edge(str(v1), str(v2), weight=str(properties['weight']))
+        with open(file_name, 'w') as f:
+            f.write(dot.source)
+
+
+class JsonExporter(GraphExporter):
+    @staticmethod
+    def export(graph, file_name):
+        g = nx.DiGraph()
+        for v in range(len(graph.vertices)):
+            g.add_node(v, label=graph.vertices[v]['sequence'],
+                       color=super(JsonExporter, JsonExporter).get_vertex_color(graph.vertices[v]['type']))
+        for v1 in range(len(graph.edges)):
+            for (v2, properties) in graph.edges[v1]:
+                g.add_edge(v1, v2, weight=properties['weight'])
+        data = json_graph.adjacency_data(g)
+        with open(file_name, 'w') as f:
+            json.dump(data, f)
 
 
 def main(fastas, max_dist_for_median_triple):
-    graphs = [SequencesNetworkCreator(fasta, max_dist_for_median_triple) for fasta in fastas]
+    graphs = [ProbabilityGraphBuilder(DistanceGraphBuilder(
+        fasta, max_dist_for_median_triple).get_minimal_connected_graph()) for fasta in fastas]
     for i, graph in enumerate(graphs):
         f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(fastas[i]))[0]
                          + '_' + str(max_dist_for_median_triple))
         out_file_json = f + '.json'
         out_file_dot = f + '.dot'
-        export_graph_to_dot(graph.get_minimal_connected_graph(), out_file_dot)
-        export_graph_to_json(graph.get_minimal_connected_graph(), out_file_json)
+        DotExporter.export(graph.probability_graph, out_file_dot)
+#        DotExporter.export(graph.distance_graph_with_compressed_hypercubes, out_file_dot)
+#        JsonExporter.export(graph.probability_graph, out_file_json)
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
