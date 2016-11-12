@@ -9,6 +9,7 @@ SEQS_5 = ["AA", "AB", "AC"]
 SEQS_6 = ["AAA", "ABA", "ABB"]
 SEQS_7 = ["AAA", "AAB", "AAA", "AAB", "AAC"]
 SEQS_8 = ["BAB", "AAB", "BAC", "ACB", "AAC"]
+
 MATRIX = [21, 31, 32, 41, 42, 43, 51, 52, 53, 54]
 MATRIX_FULL = [[0, 21, 31, 41, 51],
                [21, 0, 32, 42, 52],
@@ -29,6 +30,11 @@ class Test(unittest.TestCase):
         self.assertEqual(network_creator.filter_repeated_sequences(SEQS_2), SEQS_2)
         self.assertEqual(network_creator.filter_repeated_sequences(SEQS_3), SEQS_2)
         self.assertEqual(network_creator.filter_repeated_sequences(SEQS_4), SEQS_2)
+
+        self.assertEqual(network_creator.get_sequence_sets_difference(SEQS_0, SEQS_0), [])
+        self.assertEqual(network_creator.get_sequence_sets_difference(SEQS_8, SEQS_8), [])
+        self.assertEqual(network_creator.get_sequence_sets_difference(SEQS_7, SEQS_8), ["AAA", "AAA"])
+        self.assertEqual(network_creator.get_sequence_sets_difference(SEQS_8, SEQS_7), ["BAB", "BAC", "ACB"])
 
 
 class TriangleMatrixTest(unittest.TestCase):

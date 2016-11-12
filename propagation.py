@@ -3,10 +3,12 @@
 import random
 import json
 
+MAX_POPULATION = 1000
+
 import networkx as nx
 from networkx.readwrite import json_graph
 
-FILE_NAME = "out/graphs/AA45_unique_1b_161_4.json"
+FILE_NAME = "out/graphs/BJ30_unique_1a_6.json"
 
 
 def import_graph(file_name):
@@ -35,35 +37,37 @@ def random_walk(network, begin_node):
     return counter
 
 
-def propagate(network, begin_node):
+def propagate(network, begin_node, last_original_node):
     counter = 0
-    visited_nodes = [False] * network.number_of_nodes()
-    visited_nodes[begin_node] = True
+    visited_nodes = [0] * network.number_of_nodes()
+    visited_nodes[begin_node] = 1
     while True:
         counter += 1
-        if are_all_nodes_visited(visited_nodes):
+        if are_all_nodes_visited(visited_nodes, last_original_node):
             break
         for current_node, visited in enumerate(visited_nodes):
-            if visited:
+            for _ in range(visited):
                 d = random.random()
                 p = 0
                 for (u, v, w) in network.edges(current_node, data='weight'):
                     if u == current_node:
                         p += w
                         if p > d:
-                            visited_nodes[v] = True
+                            if visited_nodes[v] < MAX_POPULATION:
+                                visited_nodes[v] += 1
                             break
     return counter
 
 
-def are_all_nodes_visited(nodes):
-    return min(nodes)
+def are_all_nodes_visited(nodes, last):
+    print(len(list(filter(lambda i: i != 0, nodes[:last]))))
+    return min(nodes[:last])
 
 
 def main():
     network = import_graph(FILE_NAME)
-    print(random_walk(network, 10))
-    print(propagate(network, 10))
+#    print(random_walk(network, 10))
+    print(propagate(network, 1, 5))
 
 
 if __name__ == "__main__":

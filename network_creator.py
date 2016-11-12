@@ -14,8 +14,8 @@ import networkx as nx
 from networkx.readwrite import json_graph
 import json
 
+MUTATION_PROBABILITY = 0.01
 OUT_DIR = "out/graphs"
-MAX_DIST = 4
 
 
 class SymMatrixWithoutDiagonal(object):
@@ -93,8 +93,9 @@ def filter_repeated_sequences(sequences):
 
 
 def get_sequence_sets_difference(sequences1, sequences2):
+    print(list(filter(lambda i: not(True in map(lambda s2: sequences1[i] == s2, sequences2)), range(len(sequences1)))))
     return list(sequences1[i] for i in list(
-        filter(lambda i: not(True in map(lambda s2: sequences1[i] == s2, sequences2)), list(range(len(sequences1))))))
+        filter(lambda i: not(True in map(lambda s2: sequences1[i] == s2, sequences2)), range(len(sequences1)))))
 
 
 def infer_distance_matrix(sequences):
@@ -129,7 +130,7 @@ def find_all_medians(sequences):
         return filter_repeated_sequences(medians)
 
 
-def find_medians_for_similar_sequences(sequences, max_dist):
+def get_sets_of_similar_sequences(sequences, max_dist):
     distance_matrix = infer_distance_matrix(sequences)
 
     similar_sequences = []
@@ -141,10 +142,42 @@ def find_medians_for_similar_sequences(sequences, max_dist):
         if len(similar_sequences_acc) <= 2:
             continue
         similar_sequences.append(similar_sequences_acc)
+    return similar_sequences
+
+
+def find_medians_for_similar_sequences(sequences, max_dist):
+    similar_sequences = get_sets_of_similar_sequences(sequences, max_dist)
     medians = []
     for seqs in similar_sequences:
         medians += find_all_medians(seqs)
     return filter_repeated_sequences(medians)
+
+'''
+def find_all_medians_between_two_sets(sequences1, sequences2):
+    medians = []
+    sequences = [sequences1, sequences2]
+    n = [len(sequences1), len(sequences2)]
+
+    for order in [[0, 1], [1, 0]]:
+        for i in range(n[order[0]]-1):
+            for j in range(i+1, n[order[0]]):
+                for k in range(n[order[1]]):
+                    median = get_median(sequences[order[0]][i], sequences[order[0]][j], sequences[order[1]][k])
+                    if median:
+                        medians.append(median)
+    return filter_repeated_sequences(medians)
+
+
+def find_all_medians_between_two_sets_for_similar_sequences(sequences1, sequences2, max_dist):
+    medians = []
+    sequences = [sequences1, sequences2]
+    similar_sequences = [get_sets_of_similar_sequences(s, max_dist) for s in sequences]
+    for order in [[0, 1], [1, 0]]:
+        for seqs in similar_sequences[order[0]]:
+            medians += find_all_medians_between_two_sets(seqs, sequences[order[1]])
+    return filter_repeated_sequences(medians)
+
+'''
 
 
 class Graph(object):
@@ -163,10 +196,13 @@ class DistanceGraphBuilder(object):
     MIN_SEQS_DIST_THRESHOLD = 6
     MAX_DIST_FOR_MEDIANS = 8
 
-    def __init__(self, fasta, max_dist_for_medians):
-        self.max_dist_for_medians = max_dist_for_medians
+    def __init__(self, fasta, search_for_medians):
+        self.max_dist_for_medians = search_for_medians
         self.sequences = filter_repeated_sequences(self.parse_fasta(fasta))
-        self.medians = self.infer_medians(self.sequences, self.max_dist_for_medians)
+        self.medians = []
+        if search_for_medians:
+#            self.medians = self.infer_medians(self.sequences, self.max_dist_for_medians)
+            self.medians = self.infer_medians(self.sequences)
         self.vertices = self.infer_vertices()
         self.distance_matrix = infer_distance_matrix(self.sequences + self.medians)
         self.minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(
@@ -195,6 +231,11 @@ class DistanceGraphBuilder(object):
         return seqs
 
     @staticmethod
+    def infer_medians(sequences):
+        return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
+
+    '''
+    @staticmethod
     def infer_medians(sequences, max_dist_for_medians):
         filtered_sequences = filter_repeated_sequences(sequences)
         medians = []
@@ -207,8 +248,24 @@ class DistanceGraphBuilder(object):
             new_n = len(medians)
             if old_n == new_n:
                 break
-            print(new_n - old_n)
         return medians
+
+    @staticmethod
+    def infer_medians2(sequences, max_dist_for_medians):
+        filtered_sequences = filter_repeated_sequences(sequences)
+        medians = get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), filtered_sequences)
+        old_n = 0
+        new_n = len(medians)
+        while True:
+            medians += find_all_medians_between_two_sets_for_similar_sequences(
+                filtered_sequences + medians[:new_n], medians[new_n:], max_dist_for_medians)
+            medians = get_sequence_sets_difference(filter_repeated_sequences(medians), filtered_sequences)
+            old_n = new_n
+            new_n = len(medians)
+            if old_n == new_n:
+                break
+        return medians
+    '''
 
     @staticmethod
     def construct_minimal_connected_graph_matrix(distance_matrix):
@@ -223,23 +280,25 @@ class DistanceGraphBuilder(object):
 
 
 class ProbabilityGraphBuilder(object):
-    e = 0.01
+    e = MUTATION_PROBABILITY
     s = e/(1-3*e)
-    min_edge_probability = 10e-6
 
     @staticmethod
     def loop_probability(L):
         return (1 - 3 * ProbabilityGraphBuilder.e) ** L
 
     def edge_probability(self, m):
-        return self.c*self.s ** m
+        return self.c*(self.s ** m)
 
     def __init__(self, distance_graph):
         self.distance_graph = distance_graph
         self.L = len(distance_graph.vertices[0]['sequence'])
         self.c = self.loop_probability(self.L)
+        self.min_edge_probability = self.c/1000
+        print("1")
         self.distance_graph_with_compressed_hypercubes = \
             self.infer_distance_graph_with_compressed_hypercubes(self.distance_graph)
+        print("2")
         self.probability_graph = self.infer_probability_graph(self.distance_graph_with_compressed_hypercubes)
 
     @staticmethod
@@ -294,15 +353,30 @@ class GraphExporter(object):
             return 'green'
         return None
 
+    @staticmethod
+    def get_vertex_type(vertex_type):
+        if vertex_type == VertexType.original:
+            return 'original'
+        if vertex_type == VertexType.median:
+            return 'median'
+        if vertex_type == VertexType.compressed_hypercube:
+            return 'hypercube'
+        return None
+
+    @staticmethod
+    def get_vertex_attributes(vertex):
+        return {'label': vertex['sequence'] if 'sequence' in vertex else 'pool',
+                'type': GraphExporter.get_vertex_type(vertex['type']),
+                'color': GraphExporter.get_vertex_color(vertex['type'])}
+
 
 class DotExporter(GraphExporter):
     @staticmethod
     def export(graph, file_name):
         dot = Digraph()
         for v in range(len(graph.vertices)):
-            label = graph.vertices[v]['sequence'] if 'sequence' in graph.vertices[v] else 'pool'
-            dot.node(str(v), label=label,
-                     color=super(JsonExporter, JsonExporter).get_vertex_color(graph.vertices[v]['type']))
+            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
+            dot.node(str(v), label=a['label'], color=a['color'], type=a['type'])
         for v1 in range(len(graph.edges)):
             for (v2, properties) in graph.edges[v1]:
                 dot.edge(str(v1), str(v2), weight=str(properties['weight']))
@@ -315,8 +389,8 @@ class JsonExporter(GraphExporter):
     def export(graph, file_name):
         g = nx.DiGraph()
         for v in range(len(graph.vertices)):
-            g.add_node(v, label=graph.vertices[v]['sequence'],
-                       color=super(JsonExporter, JsonExporter).get_vertex_color(graph.vertices[v]['type']))
+            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
+            g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
         for v1 in range(len(graph.edges)):
             for (v2, properties) in graph.edges[v1]:
                 g.add_edge(v1, v2, weight=properties['weight'])
@@ -325,19 +399,22 @@ class JsonExporter(GraphExporter):
             json.dump(data, f)
 
 
-def main(fastas, max_dist_for_median_triple):
-    graphs = [ProbabilityGraphBuilder(DistanceGraphBuilder(
-        fasta, max_dist_for_median_triple).get_minimal_connected_graph()) for fasta in fastas]
-    for i, graph in enumerate(graphs):
-        f = os.path.join(OUT_DIR, os.path.splitext(os.path.basename(fastas[i]))[0]
-                         + '_' + str(max_dist_for_median_triple))
-        out_file_json = f + '.json'
-        out_file_dot = f + '.dot'
-        DotExporter.export(graph.probability_graph, out_file_dot)
-#        DotExporter.export(graph.distance_graph_with_compressed_hypercubes, out_file_dot)
-#        JsonExporter.export(graph.probability_graph, out_file_json)
+def main(fasta_name, search_for_medians):
+    graph = ProbabilityGraphBuilder(DistanceGraphBuilder(
+        fasta_name, search_for_medians).get_minimal_connected_graph())
+
+    fasta_basename = os.path.splitext(os.path.basename(fasta_name))[0]
+
+    f = os.path.join(OUT_DIR, fasta_basename)
+    out_file_json = f + '.json'
+    JsonExporter.export(graph.probability_graph, out_file_json)
+    out_file_dot = f + '_distance.dot'
+    DotExporter.export(graph.distance_graph, out_file_dot)
+    out_file_dot = f + '_probability.dot'
+    DotExporter.export(graph.probability_graph, out_file_dot)
+
 
 if __name__ == "__main__":
-    fastas = [sys.argv[1], sys.argv[2]]
-    max_dist_for_triple_mean = int(sys.argv[3])
-    main(fastas, max_dist_for_triple_mean)
+    fasta_name = sys.argv[1]
+    search_for_medians = False if len(sys.argv) <= 2 else True
+    main(fasta_name, search_for_medians)
