@@ -292,14 +292,24 @@ class ProbabilityGraphBuilder(object):
 
     def __init__(self, distance_graph):
         self.distance_graph = distance_graph
-        self.L = len(distance_graph.vertices[0]['sequence'])
+        self.L = self.get_count_of_heterogeneous_positions(
+            [distance_graph.vertices[i]['sequence'] for i in range(len(distance_graph.vertices))])
+        print(self.L)
         self.c = self.loop_probability(self.L)
         self.min_edge_probability = self.c/1000
-        print("1")
         self.distance_graph_with_compressed_hypercubes = \
             self.infer_distance_graph_with_compressed_hypercubes(self.distance_graph)
-        print("2")
         self.probability_graph = self.infer_probability_graph(self.distance_graph_with_compressed_hypercubes)
+
+    @staticmethod
+    def get_count_of_heterogeneous_positions(sequences):
+        count_of_heterogeneous_positions = 0
+        for j in range(len(sequences[0])):
+            for i in range(1, len(sequences)):
+                if sequences[i][j] != sequences[0][j]:
+                    count_of_heterogeneous_positions += 1
+                    break
+        return count_of_heterogeneous_positions
 
     @staticmethod
     def infer_distance_graph_with_compressed_hypercubes(distance_graph):
@@ -330,8 +340,7 @@ class ProbabilityGraphBuilder(object):
         for u, adjacency_list in enumerate(distance_graph.edges):
             probability_graph.edges[u] = []
             for i, (v, properties) in enumerate(adjacency_list):
-                multiplicity = properties["multiplicity"] if 'multiplicity' in properties else 1
-                edge_probability = self.edge_probability(properties["weight"]) * multiplicity
+                edge_probability = self.edge_probability(properties["weight"])
                 if edge_probability >= self.min_edge_probability:
                     probability_graph.edges[u].append((v, {"weight": edge_probability}))
             probability_graph.edges[u].append((u, {"weight": self.c}))
