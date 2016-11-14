@@ -53,7 +53,7 @@ def main(fastas):
         f = os.path.join(out_dir, fastas_basenames[i])
         out_file_jsons[i] = f + '.json'
         out_file_dots[i] = f + '.dot'
-        network_creator.DotExporter.export(graph.probability_graph, out_file_dots[i])
+        network_creator.DotExporter.export(graph.distance_graph, out_file_dots[i])
         network_creator.JsonExporter.export(graph.probability_graph, out_file_jsons[i])
 
     simulations_out_dir = out_dir + '/simulation'

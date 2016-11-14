@@ -9,7 +9,7 @@ from networkx.readwrite import json_graph
 
 FILE_NAME = "out/graphs/AD002_unique_1a_72.json"
 LOG_FILE_NAME = "out/graphs/AD002_unique_1a_72.out"
-LOGGING_PERIOD = 1000
+LOGGING_PERIOD = 100
 
 
 def import_graph(file_name):
@@ -19,8 +19,8 @@ def import_graph(file_name):
 
 
 class Propagator(object):
-    MAX_ORIGINAL_POPULATION = 100
-    MAX_HIDDEN_POPULATION = 10
+    MAX_ORIGINAL_POPULATION = 10
+    MAX_HIDDEN_POPULATION = 1
 
     def __init__(self, network, log_file_name):
         self.files = []
@@ -54,28 +54,31 @@ class Propagator(object):
         while True:
             self.counter += 1
             visited_nodes = []
-            new_influential_nodes = []
             for i, influential_node in enumerate(self.influential_nodes):
-                max_population = self.MAX_HIDDEN_POPULATION if influential_node > self.last_original_node \
-                    else self.MAX_ORIGINAL_POPULATION
                 for _ in range(self.population[influential_node]):
                     d = random.random()
                     p = 0
                     for (u, v, w) in self.network.edges(influential_node, data='weight'):
-                        if self.population[v] == 0:
-                            p += w
+                        p += w
                         if p > d:
-                            if self.population[v] < max_population:
-                                visited_nodes.append(v)
-                            if self.population[v] == 0:
-                                new_influential_nodes.append(v)
+                            visited_nodes.append(v)
                             break
+
+            new_influential_nodes = []
             for n in visited_nodes:
-                self.population[n] += 1
+                max_population = self.MAX_HIDDEN_POPULATION if n > self.last_original_node \
+                    else self.MAX_ORIGINAL_POPULATION
+                if self.population[n] == 0:
+                    new_influential_nodes.append(n)
+                if self.population[n] < max_population:
+                    self.population[n] += 1
+
             for n in new_influential_nodes:
                 self.influential_nodes[n] = None
             self.update_influential_nodes()
-            if self.are_all_original_nodes_visited(self.population, self.last_original_node):
+
+            if self.are_all_original_nodes_visited():
+                self.log_file.write(self.get_population_status_string())
                 break
         return self.counter
 
@@ -93,11 +96,14 @@ class Propagator(object):
                 return False
         return True
 
-    def are_all_original_nodes_visited(self, nodes_population, last):
+    def are_all_original_nodes_visited(self):
         if not self.counter % LOGGING_PERIOD:
-            self.log_file.write(' '.join(str(e) for e in nodes_population[:last]) + '\n')
-            print(len(list(filter(lambda i: i != 0, nodes_population[:last]))))
-        return min(nodes_population[:last])
+            print(len(list(filter(lambda i: i != 0, self.population[:self.last_original_node]))))
+            self.log_file.write(self.get_population_status_string())
+        return min(self.population[:self.last_original_node])
+
+    def get_population_status_string(self):
+        return ' '.join(str(e) for e in self.population[:self.last_original_node]) + '\n'
 
 
 def main():
