@@ -1,8 +1,10 @@
 import sys
 import os
 import network_creator
+import propagation
 
 OUT_DIR = "out/graphs"
+SIMULATIONS_NUMBER = 10
 
 
 def determine_network_sources(sequences1, sequences2):
@@ -41,13 +43,22 @@ def main(fastas):
         for i in range(len(fastas_basenames)):
             f.write(str(fastas_basenames[i]) + ' '.join(str(e) for e in sources[i]) + '\n')
 
+    out_file_dots = [None] * len(graphs)
+    out_file_jsons = [None] * len(graphs)
+
     for i, graph in enumerate(graphs):
         f = os.path.join(out_dir, fastas_basenames[i])
-        out_file_json = f + '.json'
-        out_file_dot = f + '.dot'
-        network_creator.DotExporter.export(graph.probability_graph, out_file_dot)
-        network_creator.JsonExporter.export(graph.probability_graph, out_file_json)
+        out_file_jsons[i] = f + '.json'
+        out_file_dots[i] = f + '.dot'
+        network_creator.DotExporter.export(graph.probability_graph, out_file_dots[i])
+        network_creator.JsonExporter.export(graph.probability_graph, out_file_jsons[i])
 
+    simulations_out_dir = out_dir + '/experiments'
+
+    for i, json in enumerate(out_file_jsons):
+        network = propagation.import_graph(json)
+        for j in range(SIMULATIONS_NUMBER):
+            print(propagation.Propagator(network).propagate(sources[i]))
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]

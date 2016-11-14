@@ -34,9 +34,10 @@ class Propagator(object):
             last_original_node += 1
         return last_original_node
 
-    def propagate(self, begin_node):
-        self.population[begin_node] = 1
-        self.influential_nodes[begin_node] = None
+    def propagate(self, begin_nodes):
+        for begin_node in begin_nodes:
+            self.population[begin_node] = 1
+            self.influential_nodes[begin_node] = None
         while True:
             self.counter += 1
             visited_nodes = []
@@ -87,7 +88,7 @@ class Propagator(object):
 
 def main():
     network = import_graph(FILE_NAME)
-    print(Propagator(network).propagate(10))
+    print(Propagator(network).propagate([10]))
 
 
 if __name__ == "__main__":
