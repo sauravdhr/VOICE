@@ -2,11 +2,14 @@
 
 import random
 import json
+import os
 
 import networkx as nx
 from networkx.readwrite import json_graph
 
 FILE_NAME = "out/graphs/AD002_unique_1a_72.json"
+LOG_FILE_NAME = "out/graphs/AD002_unique_1a_72.out"
+LOGGING_PERIOD = 1000
 
 
 def import_graph(file_name):
@@ -19,12 +22,22 @@ class Propagator(object):
     MAX_ORIGINAL_POPULATION = 100
     MAX_HIDDEN_POPULATION = 10
 
-    def __init__(self, network):
+    def __init__(self, network, log_file_name):
+        self.files = []
         self.network = network
+        self.log_file = open(log_file_name, 'w')
+        self.files.append(self.log_file)
         self.last_original_node = self.find_last_original_node()
         self.counter = 0
         self.population = [0] * self.network.number_of_nodes()
         self.influential_nodes = dict()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        for file in self.files:
+            os.unlink(file)
 
     def find_last_original_node(self):
         last_original_node = 0
@@ -80,15 +93,16 @@ class Propagator(object):
                 return False
         return True
 
-    @staticmethod
-    def are_all_original_nodes_visited(nodes, last):
-        print(len(list(filter(lambda i: i != 0, nodes[:last]))))
-        return min(nodes[:last])
+    def are_all_original_nodes_visited(self, nodes_population, last):
+        if not self.counter % LOGGING_PERIOD:
+            self.log_file.write(' '.join(str(e) for e in nodes_population[:last]) + '\n')
+            print(len(list(filter(lambda i: i != 0, nodes_population[:last]))))
+        return min(nodes_population[:last])
 
 
 def main():
     network = import_graph(FILE_NAME)
-    print(Propagator(network).propagate([10]))
+    print(Propagator(network, LOG_FILE_NAME).propagate([10]))
 
 
 if __name__ == "__main__":

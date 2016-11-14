@@ -4,7 +4,7 @@ import network_creator
 import propagation
 
 OUT_DIR = "out/graphs"
-SIMULATIONS_NUMBER = 10
+SIMULATIONS_NUMBER = 1
 
 
 def determine_network_sources(sequences1, sequences2):
@@ -24,8 +24,11 @@ def determine_network_sources(sequences1, sequences2):
 
 
 def main(fastas):
+    sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in fastas]
+    L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
+    print(L)
     graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
-        fasta, False).get_minimal_connected_graph()) for fasta in fastas]
+        sequences, False).get_minimal_connected_graph(), L) for sequences in sequences_sets]
 
     sequences = [list(filter(lambda x: x,
                              map(lambda v: v['sequence'] if 'sequence' in v else None, g.distance_graph.vertices)))
@@ -53,12 +56,16 @@ def main(fastas):
         network_creator.DotExporter.export(graph.probability_graph, out_file_dots[i])
         network_creator.JsonExporter.export(graph.probability_graph, out_file_jsons[i])
 
-    simulations_out_dir = out_dir + '/experiments'
+    simulations_out_dir = out_dir + '/simulation'
+    if not os.path.exists(simulations_out_dir):
+        os.mkdir(simulations_out_dir)
 
     for i, json in enumerate(out_file_jsons):
         network = propagation.import_graph(json)
+        f = os.path.join(simulations_out_dir, fastas_basenames[i])
         for j in range(SIMULATIONS_NUMBER):
-            print(propagation.Propagator(network).propagate(sources[i]))
+            log_file = f + '_' + str(j) + '.out'
+            print(propagation.Propagator(network, log_file).propagate(sources[i]))
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]

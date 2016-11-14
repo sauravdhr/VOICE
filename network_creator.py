@@ -152,6 +152,23 @@ def find_medians_for_similar_sequences(sequences, max_dist):
         medians += find_all_medians(seqs)
     return filter_repeated_sequences(medians)
 
+
+def parse_fasta(fasta):
+    seqs = []
+    for seq_record in SeqIO.parse(fasta, "fasta"):
+        seqs.append(str(seq_record.seq))
+    return seqs
+
+
+def get_count_of_heterogeneous_positions(sequences):
+    count_of_heterogeneous_positions = 0
+    for j in range(len(sequences[0])):
+        for i in range(1, len(sequences)):
+            if sequences[i][j] != sequences[0][j]:
+                count_of_heterogeneous_positions += 1
+                break
+    return count_of_heterogeneous_positions
+
 '''
 def find_all_medians_between_two_sets(sequences1, sequences2):
     medians = []
@@ -196,9 +213,9 @@ class DistanceGraphBuilder(object):
     MIN_SEQS_DIST_THRESHOLD = 6
     MAX_DIST_FOR_MEDIANS = 8
 
-    def __init__(self, fasta, search_for_medians):
+    def __init__(self, sequences, search_for_medians):
         self.max_dist_for_medians = search_for_medians
-        self.sequences = filter_repeated_sequences(self.parse_fasta(fasta))
+        self.sequences = sequences
         self.medians = []
         if search_for_medians:
 #            self.medians = self.infer_medians(self.sequences, self.max_dist_for_medians)
@@ -222,13 +239,6 @@ class DistanceGraphBuilder(object):
                     adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
             edges.append(adjacent_vertices)
         return Graph(self.vertices, edges)
-
-    @staticmethod
-    def parse_fasta(fasta):
-        seqs = []
-        for seq_record in SeqIO.parse(fasta, "fasta"):
-            seqs.append(str(seq_record.seq))
-        return seqs
 
     @staticmethod
     def infer_medians(sequences):
@@ -290,27 +300,14 @@ class ProbabilityGraphBuilder(object):
     def edge_probability(self, m):
         return self.c*(self.s ** m)
 
-    def __init__(self, distance_graph):
+    def __init__(self, distance_graph, L):
         self.distance_graph = distance_graph
-        self.L = len(distance_graph.vertices[0]['sequence'])
-#        self.L = self.get_count_of_heterogeneous_positions(
-#            [distance_graph.vertices[i]['sequence'] for i in range(len(distance_graph.vertices))])
-        print(self.L)
+        self.L = L
         self.c = self.loop_probability(self.L)
         self.min_edge_probability = self.c/1000
         self.distance_graph_with_compressed_hypercubes = \
             self.infer_distance_graph_with_compressed_hypercubes(self.distance_graph)
         self.probability_graph = self.infer_probability_graph(self.distance_graph_with_compressed_hypercubes)
-
-    @staticmethod
-    def get_count_of_heterogeneous_positions(sequences):
-        count_of_heterogeneous_positions = 0
-        for j in range(len(sequences[0])):
-            for i in range(1, len(sequences)):
-                if sequences[i][j] != sequences[0][j]:
-                    count_of_heterogeneous_positions += 1
-                    break
-        return count_of_heterogeneous_positions
 
     @staticmethod
     def infer_distance_graph_with_compressed_hypercubes(distance_graph):
@@ -410,8 +407,13 @@ class JsonExporter(GraphExporter):
 
 
 def main(fasta_name, search_for_medians):
+    sequences_set = parse_fasta(fasta_name)
+
+    L = get_count_of_heterogeneous_positions(sequences_set)
+    print(L)
+
     graph = ProbabilityGraphBuilder(DistanceGraphBuilder(
-        fasta_name, search_for_medians).get_minimal_connected_graph())
+        sequences_set, search_for_medians).get_minimal_connected_graph(), L)
 
     fasta_basename = os.path.splitext(os.path.basename(fasta_name))[0]
 
