@@ -4,7 +4,7 @@ import network_creator
 import propagation
 
 OUT_DIR = "out/graphs"
-SIMULATIONS_NUMBER = 10
+SIMULATIONS_NUMBER = 5
 
 
 def determine_network_sources(sequences1, sequences2):

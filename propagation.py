@@ -31,6 +31,7 @@ class Propagator(object):
         self.counter = 0
         self.population = [0] * self.network.number_of_nodes()
         self.influential_nodes = dict()
+        random.seed()
 
     def __enter__(self):
         return self
