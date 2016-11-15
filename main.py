@@ -4,7 +4,7 @@ import network_creator
 import propagation
 
 OUT_DIR = "out/graphs"
-SIMULATIONS_NUMBER = 1
+SIMULATIONS_NUMBER = 10
 
 
 def determine_network_sources(sequences1, sequences2):
@@ -60,12 +60,22 @@ def main(fastas):
     if not os.path.exists(simulations_out_dir):
         os.mkdir(simulations_out_dir)
 
-    for i, json in enumerate(out_file_jsons):
-        network = propagation.import_graph(json)
-        f = os.path.join(simulations_out_dir, fastas_basenames[i])
-        for j in range(SIMULATIONS_NUMBER):
-            log_file = f + '_' + str(j) + '.out'
-            print(propagation.Propagator(network, log_file).propagate(sources[i]))
+    results_log = os.path.join(out_dir, 'results.log')
+
+    with open(results_log, 'w') as log:
+        log.write('host source_node simulation_number cycles simulation_results_file\n')
+        for i, json in enumerate(out_file_jsons):
+            network = propagation.import_graph(json)
+            f = os.path.join(simulations_out_dir, fastas_basenames[i])
+            for j in range(SIMULATIONS_NUMBER):
+                for k in sources[i]:
+                    print(k)
+                    log_file = f + '_' + str(k) + '_' + str(j) + '.out'
+                    log.write(fastas_basenames[i] + ' '
+                              + str(k) + ' '
+                              + str(j) + ' '
+                              + str(propagation.Propagator(network, log_file).propagate([k])) + ' '
+                              + os.path.basename(log_file) + '\n')
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
