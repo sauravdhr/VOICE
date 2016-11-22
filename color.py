@@ -113,10 +113,23 @@ if infiles:
       #    correct_label_idx += 1;
       #print(dict_labels)
          
+      color_val_map = {}
+      curr_idx = 0;
+      for node in G.nodes():
+          color_val_map[node] = colors[curr_idx]
+          curr_idx += 1
+          
+      color_values = [color_val_map.get(node) for node in G.nodes()]   
+      
       #drawing
-      nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), node_color=colors, labels=dict_labels, with_labels = True)
-      #ordered_nodes = sorted(G.nodes(), key=lambda x: int(x))
-      #nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), nodelist=ordered_nodes, labels = dict_labels, node_color=colors, with_labels = True)
+      #nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), node_color=color_values, labels=dict_labels, with_labels = True)
+      ordered_nodes = G.nodes()
+      #print("before")
+      #print (ordered_nodes)      
+      ordered_nodes = sorted(ordered_nodes, key=lambda x: int(x))
+      #print("after")
+      #print (ordered_nodes)
+      nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), nodelist=ordered_nodes, labels = dict_labels, node_color=colors, with_labels = True)
       #nx.draw_networkx_labels(G, dict_labels, font_size=16)
       plt.savefig(os.path.splitext(infile)[0]+'_cycle_'+str(i)+'.png', bbox_inches='tight')
       plt.clf()
