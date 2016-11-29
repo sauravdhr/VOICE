@@ -23,18 +23,16 @@ def determine_network_sources(sequences1, sequences2):
             for s in [dist_s1, dist_s2]]
 
 
-def main(fastas):
+def main(fastas, mode):
     sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in fastas]
+    sources = determine_network_sources(sequences_sets[0], sequences_sets[1])
     L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
-    print(L)
-    graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
-        sequences, False).get_minimal_connected_graph(), L) for sequences in sequences_sets]
 
-    sequences = [list(filter(lambda x: x,
-                             map(lambda v: v['sequence'] if 'sequence' in v else None, g.distance_graph.vertices)))
-                 for g in graphs]
+#    sequences = [list(filter(lambda x: x,
+#                             map(lambda v: v['sequence'] if 'sequence' in v else None, g.distance_graph.vertices)))
+#                 for g in graphs]
 
-    sources = determine_network_sources(sequences[0], sequences[1])
+#    sources = determine_network_sources(sequences[0], sequences[1])
 
     fastas_basenames = [os.path.splitext(os.path.basename(f))[0] for f in fastas]
     out_dir = OUT_DIR + '/' + fastas_basenames[0] + '_to_' + fastas_basenames[1]
@@ -43,8 +41,19 @@ def main(fastas):
 
     out_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
     with open(out_file, 'w') as f:
-        for i in range(len(fastas_basenames)):
-            f.write(str(fastas_basenames[i]) + ' '.join(str(e) for e in sources[i]) + '\n')
+        for i, j in [(0, 1), (1, 0)]:
+            if mode == 's':
+                l = sources[i]
+            elif mode == 'a':
+                l = list(range(len(sequences_sets[i]), len(sequences_sets[i]) + len(sources[j])))
+            f.write(str(fastas_basenames[i]) + ' ' + ' '.join(str(e) for e in l) + '\n')
+
+    graphs_sequences = [sequences_sets[0] + [sequences_sets[1][i] for i in sources[1]],
+                        sequences_sets[1] + [sequences_sets[0][i] for i in sources[0]]] if mode == 'a' \
+        else [sequences_sets[0], sequences_sets[1]]
+
+    graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
+        sequences, False).get_minimal_connected_graph(), L) for sequences in graphs_sequences]
 
     out_file_dots = [None] * len(graphs)
     out_file_jsons = [None] * len(graphs)
@@ -68,15 +77,23 @@ def main(fastas):
             network = propagation.import_graph(json)
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
             for j in range(SIMULATIONS_NUMBER):
-                for k in sources[i]:
-                    print(k)
-                    log_file = f + '_' + str(k) + '_' + str(j) + '.out'
+                if mode == 's':
+                    for k in sources[i]:
+                        log_file = f + '_' + str(k) + '_' + str(j) + '.out'
+                        log.write(fastas_basenames[i] + ' '
+                                  + str(k) + ' '
+                                  + str(j) + ' '
+                                  + str(propagation.Propagator(network, log_file).propagate([k])) + ' '
+                                  + os.path.basename(log_file) + '\n')
+                elif mode == 'a':
+                    log_file = f + '_' + str(j) + '.out'
                     log.write(fastas_basenames[i] + ' '
-                              + str(k) + ' '
                               + str(j) + ' '
-                              + str(propagation.Propagator(network, log_file).propagate([k])) + ' '
+                              + str(propagation.Propagator(network, log_file).propagate(sources[i])) + ' '
                               + os.path.basename(log_file) + '\n')
+
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
-    main(fastas)
+    mode = sys.argv[3] if len(sys.argv) > 3 else 'a'
+    main(fastas, mode)

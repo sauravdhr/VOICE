@@ -99,7 +99,7 @@ class Propagator(object):
 
     def are_all_original_nodes_visited(self):
         if not self.counter % LOGGING_PERIOD:
-            print(len(list(filter(lambda i: i != 0, self.population[:self.last_original_node]))))
+#            print(len(list(filter(lambda i: i != 0, self.population[:self.last_original_node]))))
             self.log_file.write(self.get_population_status_string())
         return min(self.population[:self.last_original_node])
 
