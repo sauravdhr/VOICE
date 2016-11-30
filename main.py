@@ -72,7 +72,10 @@ def main(fastas, mode):
     results_log = os.path.join(out_dir, 'results.log')
 
     with open(results_log, 'w') as log:
-        log.write('host source_node simulation_number cycles simulation_results_file\n')
+        if mode == 's':
+            log.write('host source_node simulation_number cycles simulation_results_file\n')
+        elif mode == 'a':
+            log.write('host simulation_number cycles simulation_results_file\n')
         for i, json in enumerate(out_file_jsons):
             network = propagation.import_graph(json)
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
