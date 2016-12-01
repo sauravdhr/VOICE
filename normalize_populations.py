@@ -28,18 +28,25 @@ def distance(a, b):
 
 def to_consensus(fseqs):
     consen = fseqs[0]
-    profile = [defaultdict(float) for _ in  range(len(consen))]
-    for s in fseqs:
-        cnt = get_count(s, count_re_pattern)
-        for i in range(len(consen)):
-            profile[i][s.seq[i]] += cnt
+    profile = build_profile(fseqs)
 
     constr = ''.join(map(lambda x: max(x, key=x.get), profile))
     cc = Seq(constr, consen.seq.alphabet)
     consen.seq = cc
     return consen
 
-def process_file(fasta, k):
+
+def build_profile(fseqs):
+    consen = fseqs[0]
+    profile = [defaultdict(float) for _ in range(len(consen))]
+    for s in fseqs:
+        cnt = get_count(s, count_re_pattern)
+        for i in range(len(consen)):
+            profile[i][s.seq[i]] += cnt
+    return profile
+
+
+def cluster_and_consensus(fasta, k):
     vectors = list(map(lambda x: list(map(lambda y: nucls.index(y), x.seq)), fasta))
     vs = np.array(vectors)
 
@@ -72,6 +79,8 @@ if __name__=='__main__':
                              "By default it creates directory named \'out\' in the input directory")
     parser.add_argument("-c", dest='sample_code', type=str, default='',
                         help="Sample code (first 2 letters case sensitive in filename)")
+    parser.add_argument("-L", dest='var_pos', type=argparse.FileType('w+'), default=sys.stdout,
+                        help="Path to a txt file where to write variable positions. Default stdout.")
     args = parser.parse_args()
 
     if not os.path.isdir(args.input_dir):
@@ -93,5 +102,9 @@ if __name__=='__main__':
 
     for fname in fastas:
         fasta = fastas[fname]
-        res = process_file(fasta, k) if len(fasta) > k+1 else fasta
+        res = cluster_and_consensus(fasta, k) if len(fasta) > k + 1 else fasta
         SeqIO.write(res, open("%s/%s" % (output, fname), 'w+'), 'fasta')
+
+    full_profile = build_profile([x for y in fastas.values() for x in y])
+
+    args.var_pos.write("%d\n" % sum(1 for x in full_profile if len(x) > 1))
