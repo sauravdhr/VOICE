@@ -23,10 +23,11 @@ def determine_network_sources(sequences1, sequences2):
             for s in [dist_s1, dist_s2]]
 
 
-def main(fastas, mode):
+def main(fastas, L, mode):
     sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in fastas]
     sources = determine_network_sources(sequences_sets[0], sequences_sets[1])
-    L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
+    if L == 0:
+        L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
 
 #    sequences = [list(filter(lambda x: x,
 #                             map(lambda v: v['sequence'] if 'sequence' in v else None, g.distance_graph.vertices)))
@@ -98,5 +99,6 @@ def main(fastas, mode):
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
-    mode = sys.argv[3] if len(sys.argv) > 3 else 'a'
-    main(fastas, mode)
+    L = sys.argv[2] if len(sys.argv) > 3 else 0
+    mode = sys.argv[3] if len(sys.argv) > 4 else 'a'
+    main(fastas, L, mode)
