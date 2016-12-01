@@ -99,6 +99,6 @@ def main(fastas, L, mode):
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
-    L = sys.argv[2] if len(sys.argv) > 3 else 0
-    mode = sys.argv[3] if len(sys.argv) > 4 else 'a'
+    mode = sys.argv[2] if len(sys.argv) > 3 else 'a'
+    L = sys.argv[3] if len(sys.argv) > 4 else 0
     main(fastas, L, mode)
