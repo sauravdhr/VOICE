@@ -10,6 +10,7 @@ import sys
 import os
 import network_creator
 import propagation
+import graph_utils
 
 OUT_DIR = "out/graphs"
 SIMULATIONS_NUMBER = 5
@@ -87,7 +88,7 @@ def main(fastas, L, mode):
         elif mode == 'a':
             log.write('host simulation_number cycles simulation_results_file\n')
         for i, json in enumerate(out_file_jsons):
-            network = propagation.import_graph(json)
+            network = graph_utils.import_graph(json)
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
             for j in range(SIMULATIONS_NUMBER):
                 if mode == 's':
