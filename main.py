@@ -49,6 +49,7 @@ def main(fastas, L, mode):
         os.mkdir(out_dir)
 
     out_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
+    l = []
     with open(out_file, 'w') as f:
         for i, j in [(0, 1), (1, 0)]:
             if mode == 's':
