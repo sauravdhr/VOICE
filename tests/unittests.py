@@ -1,5 +1,14 @@
+#!/usr/bin/env python3
+
+"""
+Author: Sergey Knyazev
+Email: sergey.n.knyazev@gmail.com
+Created: 12.01.2016
+"""
+
 import unittest
 import network_creator
+
 SEQS_0 = ["AAA"]
 SEQS_1 = ["AAA", "AAA"]
 SEQS_2 = ["AAA", "AAB"]
