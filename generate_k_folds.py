@@ -44,15 +44,26 @@ if __name__=='__main__':
 
     for i in range(k):
         tmp_out = "%s/%d" % (output, i)
+        tmp_out_test = "%s/testing" % tmp_out
+        tmp_out_train = "%s/training" % tmp_out
         os.makedirs(tmp_out)
-        tmp_out_unr = "%s/%s" % (tmp_out, unrelated_code)
-        os.makedirs(tmp_out_unr)
+        os.makedirs(tmp_out_test)
+        os.makedirs(tmp_out_train)
+        tmp_out_test_unr = "%s/%s" % (tmp_out_test, unrelated_code)
+        tmp_out_train_unr = "%s/%s" % (tmp_out_train, unrelated_code)
+        os.makedirs(tmp_out_test_unr)
+        os.makedirs(tmp_out_train_unr)
         for j, p in enumerate(paths):
             if not unrelated_code in p:
                 if j % k != i:
-                    os.system("cp -r %s %s" % (p, tmp_out))
+                    os.system("cp -r %s %s" % (p, tmp_out_train))
+                else:
+                    os.system("cp -r %s %s" % (p, tmp_out_test))
             else:
                 unrelated_samples = [f for f in glob.glob("%s/*.fas" % p)]
                 for sj, sp in enumerate(unrelated_samples):
                     if sj % k != i:
-                        os.system("cp %s %s" % (sp, tmp_out_unr))
+                        os.system("cp %s %s" % (sp, tmp_out_train_unr))
+                    else:
+                        os.system("cp %s %s" % (sp, tmp_out_test_unr))
+
