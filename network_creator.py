@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+"""
+Author: Sergey Knyazev
+Email: sergey.n.knyazev@gmail.com
+Created: 12.01.2016
+"""
+
 import os
 import sys
 from Bio import SeqIO

@@ -1,7 +1,16 @@
+#!/usr/bin/env python3
+
+"""
+Author: Sergey Knyazev
+Email: sergey.n.knyazev@gmail.com
+Created: 12.01.2016
+"""
+
 import sys
 import os
 import network_creator
 import propagation
+import graph_utils
 
 OUT_DIR = "out/graphs"
 SIMULATIONS_NUMBER = 5
@@ -41,6 +50,7 @@ def main(fastas, L, mode):
         os.mkdir(out_dir)
 
     out_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
+    l = []
     with open(out_file, 'w') as f:
         for i, j in [(0, 1), (1, 0)]:
             if mode == 's':
@@ -78,7 +88,7 @@ def main(fastas, L, mode):
         elif mode == 'a':
             log.write('host simulation_number cycles simulation_results_file\n')
         for i, json in enumerate(out_file_jsons):
-            network = propagation.import_graph(json)
+            network = graph_utils.import_graph(json)
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
             for j in range(SIMULATIONS_NUMBER):
                 if mode == 's':
@@ -99,6 +109,6 @@ def main(fastas, L, mode):
 
 if __name__ == "__main__":
     fastas = [sys.argv[1], sys.argv[2]]
-    mode = sys.argv[2] if len(sys.argv) > 3 else 'a'
-    L = sys.argv[3] if len(sys.argv) > 4 else 0
+    mode = sys.argv[3] if len(sys.argv) > 4 else 'a'
+    L = float(sys.argv[4]) if len(sys.argv) > 5 else 0
     main(fastas, L, mode)

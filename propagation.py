@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 
-import random
-import json
-import os
+"""
+Author: Sergey Knyazev
+Email: sergey.n.knyazev@gmail.com
+Created: 12.01.2016
+"""
 
-import networkx as nx
-from networkx.readwrite import json_graph
+import random
+import os
+import graph_utils
 
 FILE_NAME = "out/graphs/AD002_unique_1a_72.json"
 LOG_FILE_NAME = "out/graphs/AD002_unique_1a_72.out"
 LOGGING_PERIOD = 100
-
-
-def import_graph(file_name):
-    with open(file_name) as f:
-        data = json.load(f)
-        return json_graph.adjacency_graph(data)
 
 
 class Propagator(object):
@@ -108,7 +105,7 @@ class Propagator(object):
 
 
 def main():
-    network = import_graph(FILE_NAME)
+    network = graph_utils.import_graph(FILE_NAME)
     print(Propagator(network, LOG_FILE_NAME).propagate([10]))
 
 
