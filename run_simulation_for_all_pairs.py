@@ -8,6 +8,7 @@ Created on Thu Dec  1 21:27:46 2016
 import sys
 from main import main
 import math
+import os
 from os import listdir, path, walk
 from os.path import isfile, join
 from itertools import combinations
@@ -19,7 +20,7 @@ import subprocess
 from subprocess import Popen, STDOUT
 from threading import Timer
 from time import sleep
-
+import ntpath
 
 class RepeatedTimer(object):
     def __init__(self, interval, function, *args, **kwargs):
@@ -79,8 +80,6 @@ pairs_num = len(pairs)
 
 cores_num = multiprocessing.cpu_count()
 
-print(cores_num)
-
 s = 'Total input pairs: ' + str(pairs_num)
 s = s + '\nCores: ' + str(cores_num)
 with open("all_pairs_simulations_log.txt","a+") as f:
@@ -128,12 +127,34 @@ class ProcessPool(object):
         for p in self.subprocesses:
             if p:
                 p.wait()
-    
-pool = ProcessPool(cores_to_use)
 
+out = sys.argv[2]
+completed_pairs_folders = [dI for dI in os.listdir(out) if os.path.isdir(os.path.join(out,dI))]
+completed_pairs = []
+
+for folder in completed_pairs_folders:
+      completed_pairs.append(folder.split('_to_'))
+
+print('Already completed pairs: ' + str(len(completed_pairs)))
+
+pairs_to_complete = []
+for pair in pairs:
+    already_completed = False
+    for completed_pair in completed_pairs:
+        if (os.path.splitext(ntpath.basename(list(pair)[0]))[0] == completed_pair[0] and os.path.splitext(ntpath.basename(list(pair)[1]))[0] == completed_pair[1]):
+            already_completed = True
+    if not already_completed:
+        pairs_to_complete.append(pair)
+    else:
+        print("Simulation for pair " + list(pair)[0]  + '_to_' + list(pair)[1] + ' has already been completed. Skipping.')
+
+print('Pairs to be completed: ' + str(len(pairs_to_complete)))
+
+pool = ProcessPool(cores_to_use)
 i = 0
-while i != len(pairs):
-    if pool.add_new_task(pairs[i]):
+while i != len(pairs_to_complete):
+    print(pairs_to_complete[i])
+    if pool.add_new_task(pairs_to_complete[i]):
         i += 1
         continue
     sleep(3)
