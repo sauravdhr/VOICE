@@ -78,6 +78,9 @@ class Propagator(object):
             if self.are_all_original_nodes_visited():
                 self.log_file.write(self.get_population_status_string())
                 break
+        # Prevent infinite simulations
+        if self.counter > 10000000:
+            print("Exceeded the maximum number of tacts. Stopping the simulation.")
         return self.counter
 
     def update_influential_nodes(self):
