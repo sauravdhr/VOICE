@@ -25,6 +25,14 @@ MUTATION_PROBABILITY = 0.01
 OUT_DIR = "out/graphs"
 
 
+def represents_int(s):
+    try:
+        int(s)
+        return True
+    except:
+        return False
+
+
 class SymMatrixWithoutDiagonal(object):
 # it is upper-packed matrix (see http://www.ibm.com/support/knowledgecenter/SSFHY8_5.3.0/com.ibm.cluster.essl.v5r3.essl100.doc/am5gr_upsm.htm#am5gr_upsm).
     def __init__(self, vector):
@@ -36,7 +44,7 @@ class SymMatrixWithoutDiagonal(object):
         self.vector[i] = value
 
     def __getitem__(self, index):
-        if len(index) == 1:
+        if represents_int(index) or len(index) == 1:
             return self.get_row(index)
         i = self.get_index(index[0], index[1])
         if i is not None:
