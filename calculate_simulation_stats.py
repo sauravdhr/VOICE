@@ -31,7 +31,7 @@ for folder in target_subfolders:
 first_source_name = ''
 second_source_name = ''
 #map for simulations
-
+total_cycles = []
 for infile in target_result_files:
     current_pair_name = os.path.basename(os.path.normpath(os.path.dirname(infile)))
     #print (current_pair_name)
@@ -41,12 +41,13 @@ for infile in target_result_files:
     second_cycles_minimum_average = 0
     simulation_ids = set()
     # get all simulations ids
+    print(infile)
     with open(infile) as temp:
         for line in temp:
             if line.split()[0] == 'host':
                 continue
             else:
-                simulation_ids.add(int(line.split()[2]))
+                simulation_ids.add(int(line.split()[1]))
     first_source_simulations_dict = defaultdict()            
     first_source_simulations_dict = {k: [] for k in range(max(simulation_ids)+1)}                               
     second_source_simulations_dict = {k: [] for k in range(max(simulation_ids)+1)}
@@ -66,10 +67,10 @@ for infile in target_result_files:
          if line.split()[0] == 'host':
              continue
          else:
-             current_simulation_index = line.split()[2]
+             current_simulation_index = line.split()[1]
              #print (line)
              current_source_name = line.split()[0]
-             current_cycles_num = int(line.split()[3])
+             current_cycles_num = int(line.split()[2])
              #print (current_cycles_num)
              
              if current_source_name == first_source_name:
@@ -144,12 +145,11 @@ for infile in target_result_files:
         source = second_source_name
     print('s')
     print(s)
-    total_cycles_for_both = first_source_total_cycles + second_source_total_cycles    
+    total_cycles_for_both = first_source_total_cycles + second_source_total_cycles
+    total_cycles.append(total_cycles_for_both)    
     s = s + '\nSource: ' + source
     s = s + '\nTotal cycles for pair: ' + str(total_cycles_for_both)
     print('\nTotal cycles for pair: ' + str(total_cycles_for_both))
     stats.write(s)
          
- 
-        
-#print(target_result_files)
+print(max(total_cycles))
