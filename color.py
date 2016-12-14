@@ -59,8 +59,6 @@ if infiles:
      idx_in_line = 0
      lines_num = 0
      
-     #idx_in_line, lines_num = [int(x) for x in next(f).split()]
-     
      print(infile)
      
      with open(infile) as f:
@@ -69,28 +67,24 @@ if infiles:
                   
      print(idx)     
           
-     #graph.write_png()
      nodes = graph.get_node_list()
      full_labels = []
      for node in nodes:
          node.set('color', 'green')
          current_label = node.get('label')
          full_labels.append(current_label)
-         #print(current_label)
-         
-     #graph.nodes = nodes
-     #graph.write_dot(result_graph, 'raw')
-     #Gtmp = pgv.AGraph(None, result_graph, None, None, None, infile, True, True)
-     #G = nx.Graph(Gtmp)
-     #G = nx_pydot.read_dot(result_graph)
-     
-     for i in range(0,len(idx),len(idx)/10):
+        
+     step = 1
+     i = 0
+     if len(idx)/10 > 0:
+        step = len(idx)/10
+     while (i < len(idx)):
       colors = idx[i]
       print(i)
       print(len(idx[i]))
       print(len(G.nodes()))
       print(colors)
-      
+      i+=step
       labels_keys = []
       labels_values = []
       
@@ -103,22 +97,15 @@ if infiles:
       
       print(G.nodes())
       print(dict_labels)
-         
-      
-      #print(str_dict_labels)      
-      
-      #correct_label_idx = 0;
-      #for key in dict_labels.keys():
-      #    dict_labels[key] = str(correct_label_idx)
-      #    correct_label_idx += 1;
-      #print(dict_labels)
-         
+      print(colors)
       color_val_map = {}
       curr_idx = 0;
       for node in G.nodes():
-          color_val_map[node] = colors[curr_idx]
-          curr_idx += 1
-          
+          if curr_idx < len(colors):
+            color_val_map[node] = colors[curr_idx]
+          else:
+            break;
+          curr_idx += 1   
       color_values = [color_val_map.get(node) for node in G.nodes()]   
       
       #drawing
@@ -129,7 +116,7 @@ if infiles:
       ordered_nodes = sorted(ordered_nodes, key=lambda x: int(x))
       #print("after")
       #print (ordered_nodes)
-      nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), nodelist=ordered_nodes, labels = dict_labels, node_color=colors, with_labels = True)
+      nx.draw_graphviz(G, cmap=plt.get_cmap('Reds'), nodelist=ordered_nodes, labels = dict_labels, node_color=color_values, with_labels = True)
       #nx.draw_networkx_labels(G, dict_labels, font_size=16)
       plt.savefig(os.path.splitext(infile)[0]+'_cycle_'+str(i)+'.png', bbox_inches='tight')
       plt.clf()
