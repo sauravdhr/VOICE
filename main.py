@@ -42,6 +42,14 @@ def get_sequences_intersections_indices(sequences_sets_1, sequences_sets_2):
     return indices_of_copies
 
 
+def get_source_nodes_indices(sequences_sets, indices_of_copies, sources):
+    source_nodes_indices = []
+    for i, k in [(0, 1), (1, 0)]:
+        source_nodes_indices.append(
+            indices_of_copies[i] + list(range(len(sequences_sets[i]), len(sequences_sets[i]) + len(sources[k]))))
+    return source_nodes_indices
+
+
 def main(fastas, L):
     sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in fastas]
     indices_of_copies = get_sequences_intersections_indices(sequences_sets[0], sequences_sets[1])
@@ -55,14 +63,15 @@ def main(fastas, L):
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    out_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
-    l = []
-    with open(out_file, 'w') as f:
-        for i, k in [(0, 1), (1, 0)]:
-            l = list(range(len(sequences_sets[i]), len(sequences_sets[i]) + len(sources[k])))
-            f.write(str(fastas_basenames[i]) + ' ' + ' '.join(str(e) for e in l) + '\n')
-            graphs_sequences = [[sequences_sets[1][i] for i in sources[1]] + sequences_sets[0],
-                                [sequences_sets[0][i] for i in sources[0]] + sequences_sets[1]]
+    source_nodes_indices = get_source_nodes_indices(sequences_sets, indices_of_copies, sources)
+
+    sources_nodes_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
+    with open(sources_nodes_file, 'w') as f:
+        for i, s in enumerate(source_nodes_indices):
+            f.write(str(fastas_basenames[i]) + ' ' + ' '.join(str(e) for e in s) + '\n')
+
+    graphs_sequences = [sequences_sets[0] + [sequences_sets[1][i] for i in sources[1]],
+                        sequences_sets[1] + [sequences_sets[0][i] for i in sources[0]]]
 
     graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
         sequences, False).get_minimal_connected_graph(), L) for sequences in graphs_sequences]
@@ -93,7 +102,7 @@ def main(fastas, L):
                 log.write(fastas_basenames[i] + ' '
                           + str(k) + ' '
                           + str(propagation.Propagator(network, log_file).
-                                propagate(sources[i] + [ind + len(sources[i]) for ind in indices_of_copies[j]]))
+                                propagate(source_nodes_indices[i]))
                           + ' ' + os.path.basename(log_file) + '\n')
 
 
