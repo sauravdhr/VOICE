@@ -39,6 +39,20 @@ The script runs pair simulations for all pairs of all hosts specified in a given
 color.py
 The script draws graphs for simulations results for one pair.
 
+Input parameters:
+
+simulation result folder with .out files;
+first host graph template (.dot file);
+second host graph template (.dot file).
+
+Graphs are currently saved to simulation folder.
+
 * Analyses Simulation Statistics
 calculate_simulation_stats.py
+
+Input parameters:
+
+Simulations resulting folder (e.g. out/graphs).
+
+Result text files are saved to statistics folder by default.
 
