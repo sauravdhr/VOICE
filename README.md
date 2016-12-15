@@ -27,3 +27,18 @@ This README would normally document whatever steps are necessary to get your app
 
 * Repo owner or admin
 * Other community or team contact
+
+### Project Structure ###
+* Normalization
+
+* Simulation for all pairs
+run_simulation_for_all_pairs.py
+The script runs pair simulations for all pairs of all hosts specified in a given folder.
+
+* Graph coloring
+color.py
+The script draws graphs for simulations results for one pair.
+
+* Analyses Simulation Statistics
+calculate_simulation_stats.py
+
