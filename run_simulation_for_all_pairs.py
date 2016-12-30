@@ -6,7 +6,7 @@ Created on Thu Dec  1 21:27:46 2016
 """
 
 import sys
-from main import main
+from run_pair_simulation import main
 import math
 import os
 from os import listdir, path, walk
@@ -61,7 +61,7 @@ def replace_completed_subprocesses(all_pairs, simulations_subprocesses, simulati
                 if not pair_to_launch:
                     sys.exit()
                 simulations_subprocesses_pairs[i] = pair_to_launch
-                simulations_subprocesses[i] = subprocess.Popen(['python3.4', 'main.py', pair[0], pair[1], 'a', '100'])
+                simulations_subprocesses[i] = subprocess.Popen(['python3.4', 'run_pair_simulation.py', pair[0], pair[1], 'a', '100'])
         
         
 # directory with all sequences
@@ -111,7 +111,7 @@ class ProcessPool(object):
         for i in range(len(self.subprocesses)):
             if not self.subprocesses[i]:
                 print('Launching simulation for pair: ' + task[0] + ' ' + task[1])
-                self.subprocesses[i] = Popen(['python3.4', 'main.py', task[0], task[1], 'a', '100'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                self.subprocesses[i] = Popen(['python3.4', 'run_pair_simulation.py', task[0], task[1], 'a', '100'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 return True
         return False
 

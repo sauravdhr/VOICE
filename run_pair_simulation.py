@@ -13,7 +13,7 @@ import propagation
 import graph_utils
 
 OUT_DIR = "out/graphs"
-SIMULATIONS_NUMBER = 1
+SIMULATIONS_NUMBER = 5
 
 
 def determine_network_sources(sequences1, sequences2):
