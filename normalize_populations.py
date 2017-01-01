@@ -1,5 +1,5 @@
 """
-Author: Alexander Artyomenko <aartyomenko@cs.gsu.edu>
+Authors: Alexander Artyomenko <aartyomenko@cs.gsu.edu>, Sergey Knyazev <sergey.n.knyazev@gmail.com
 Created: 11/28/2016
 """
 
@@ -19,6 +19,7 @@ nucls='ACTG'
 method='average'
 criterion='maxclust'
 count_re_pattern='' #'[0-9]*$'
+k_min = 20
 
 def distance(a, b):
     if len(a) != len(b):
@@ -81,13 +82,16 @@ if __name__=='__main__':
                         help="Sample code (first 2 letters case sensitive in filename)")
     parser.add_argument("-L", dest='var_pos', type=argparse.FileType('w+'), default=sys.stdout,
                         help="Path to a txt file where to write variable positions. Default stdout.")
+    parser.add_argument("-k", dest='k_min', type=int, default=k_min,
+                        help="Minimum number of sequences in fasta files after normalization.")
     args = parser.parse_args()
 
     if not os.path.isdir(args.input_dir):
         sys.stderr.write("Input directory path does not exist or unavailable!")
         sys.exit(-1)
 
-    output = "%s/%s" % (args.input_dir, args.out_dir)
+#    output = "%s/%s" % (args.input_dir, args.out_dir)
+    output = args.out_dir
 
     if os.path.isdir(output):
         os.system('rm -r %s' % output)
@@ -98,7 +102,8 @@ if __name__=='__main__':
     fastas = {os.path.basename(f):list(SeqIO.parse(f, 'fasta'))
               for f in glob.glob("%s/%s*.fas" % (args.input_dir, args.sample_code))}
 
-    k = min(map(len, fastas.values()))
+    k = max(args.k_min, min(map(len, fastas.values())))
+    print(output)
 
     for fname in fastas:
         fasta = fastas[fname]

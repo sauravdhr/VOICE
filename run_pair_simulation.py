@@ -11,9 +11,11 @@ import os
 import network_creator
 import propagation
 import graph_utils
+import argparse
 
 OUT_DIR = "out/graphs"
-SIMULATIONS_NUMBER = 5
+DEFAULT_SIMULATIONS_NUMBER = 5
+DEFAULT_N = 100
 
 
 def determine_network_sources(sequences1, sequences2):
@@ -50,7 +52,7 @@ def get_source_nodes_indices(sequences_sets, indices_of_copies, sources):
     return source_nodes_indices
 
 
-def main(fastas, L):
+def main(fastas, out_dir, simulations_count, L):
     sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in fastas]
     indices_of_copies = get_sequences_intersections_indices(sequences_sets[0], sequences_sets[1])
     sources = determine_network_sources(sequences_sets[0], sequences_sets[1])
@@ -59,7 +61,7 @@ def main(fastas, L):
         L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
 
     fastas_basenames = [os.path.splitext(os.path.basename(f))[0] for f in fastas]
-    out_dir = OUT_DIR + '/' + fastas_basenames[0] + '_to_' + fastas_basenames[1]
+    out_dir = out_dir + '/' + fastas_basenames[0] + '_to_' + fastas_basenames[1]
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
@@ -97,7 +99,7 @@ def main(fastas, L):
         for i, j in [[0, 1], [1, 0]]:
             network = graph_utils.import_graph(out_file_jsons[i])
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
-            for k in range(SIMULATIONS_NUMBER):
+            for k in range(simulations_count):
                 log_file = f + '_' + str(k) + '.out'
                 log.write(fastas_basenames[i] + ' '
                           + str(k) + ' '
@@ -106,7 +108,23 @@ def main(fastas, L):
                           + ' ' + os.path.basename(log_file) + '\n')
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fasta1",
+                        help="Fasta file for 1st host.")
+    parser.add_argument("fasta2",
+                        help="Fasta file for 2nd host.")
+    parser.add_argument("-o", dest='out_dir', type=str, default=OUT_DIR,
+                        help="Path to an output directory relative to input dir. "
+                             "By default it creates directory named \'" + OUT_DIR + "\' in the input directory")
+    parser.add_argument("-n", dest='simulations_count', type=int, default=DEFAULT_SIMULATIONS_NUMBER,
+                        help="Count of simulations repeats.")
+    parser.add_argument("-L", dest='L', type=int, default=DEFAULT_N,
+                        help="Parameter which represent a number of nucleotides prone to mutate during simulation" +
+                        " (it is used in probability formula for edge weight calculation).")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    fastas = [sys.argv[1], sys.argv[2]]
-    L = float(sys.argv[4]) if len(sys.argv) > 5 else 0
-    main(fastas, L)
+    args = parse_arguments()
+    main([args.fasta1, args.fasta2], args.out_dir, args.simulations_count, args.L)
