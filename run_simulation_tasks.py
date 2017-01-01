@@ -31,8 +31,7 @@ class PairTask(TaskComposite):
         self.fasta2 = fasta2
 
     def list_tasks(self):
-        return [((self.fasta1, self.fasta2), self.out_dir),
-                ((self.fasta2, self.fasta1), self.out_dir)]
+        return [((self.fasta1, self.fasta2), self.out_dir)]
 
 
 class MultiTasks(TaskComposite):
