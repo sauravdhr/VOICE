@@ -28,7 +28,7 @@ def parse_arguments():
     parser.add_argument("-L", dest='L',
                         help="Parameter which represent a number of nucleotides prone to mutate during simulation" +
                         " (it is used in probability formula for edge weight calculation).")
-    parser.add_argument("-c", dest='cores_count',
+    parser.add_argument("-c", dest='cores_count', type=int,
                         help="Desired number of CPU cores to run simulations.")
     return parser.parse_args()
 
