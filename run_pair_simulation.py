@@ -9,7 +9,7 @@ Created: 12.01.2016
 import sys
 import os
 import network_creator
-import propagation
+import network_propagation
 import graph_utils
 import argparse
 
@@ -61,9 +61,9 @@ def main(fastas, out_dir, simulations_count, L):
         L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
 
     fastas_basenames = [os.path.splitext(os.path.basename(f))[0] for f in fastas]
-    out_dir = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1])
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+#    out_dir = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1])
+#    if not os.path.exists(out_dir):
+#        os.mkdir(out_dir)
 
     source_nodes_indices = get_source_nodes_indices(sequences_sets, indices_of_copies, sources)
 
@@ -103,7 +103,7 @@ def main(fastas, out_dir, simulations_count, L):
                 log_file = f + '_' + str(k) + '.out'
                 log.write(fastas_basenames[i] + ' '
                           + str(k) + ' '
-                          + str(propagation.Propagator(network, log_file).
+                          + str(network_propagation.Propagator(network, log_file).
                                 propagate(source_nodes_indices[i]))
                           + ' ' + os.path.basename(log_file) + '\n')
 

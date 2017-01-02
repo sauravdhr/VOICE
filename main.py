@@ -28,6 +28,8 @@ def parse_arguments():
     parser.add_argument("-L", dest='L',
                         help="Parameter which represent a number of nucleotides prone to mutate during simulation" +
                         " (it is used in probability formula for edge weight calculation).")
+    parser.add_argument("-c", dest='cores_count',
+                        help="Desired number of CPU cores to run simulations.")
     return parser.parse_args()
 
 
@@ -36,7 +38,7 @@ def main():
     tasks = simulation_tasks_manager.TasksManager(args.tasks_file, args.out_dir)
     tasks.init_tasks()
     tasks.normalize_populations(args.k_min)
-    tasks.run_simulations(args.simulations_count, args.L)
+    tasks.run_simulations(args.simulations_count, args.L, args.cores_count)
 
 if __name__ == '__main__':
     main()

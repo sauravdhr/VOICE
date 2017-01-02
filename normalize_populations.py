@@ -103,7 +103,7 @@ if __name__=='__main__':
               for f in glob.glob("%s/%s*.fas" % (args.input_dir, args.sample_code))}
 
     k = max(args.k_min, min(map(len, fastas.values())))
-    print(output)
+#    print(output)
 
     for fname in fastas:
         fasta = fastas[fname]

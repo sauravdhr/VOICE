@@ -12,10 +12,12 @@ import time
 import sys
 
 NAME_OF_SIMULATION_SCRIPT = 'run_pair_simulation.py'
+LAUNCH_PERIOD = 1
 
 
 class TaskComposite(object):
     __metaclass__ = ABCMeta
+
     def __init__(self, out_dir=None):
         self.out_dir = out_dir
 
@@ -134,11 +136,11 @@ class SimulationManager(object):
         for t in self.outbreaks_tasks:
             tasks_list.extend(t.list_tasks())
         while i != len(tasks_list):
-            print(tasks_list[i])
             if pool.add_new_task(tasks_list[i][0], tasks_list[i][1]):
+                print('Launched {0} tasks of {1}'.format(i, len(tasks_list)))
                 i += 1
                 continue
-            time.sleep(3)
+            time.sleep(LAUNCH_PERIOD)
             pool.check_results()
         pool.wait()
 

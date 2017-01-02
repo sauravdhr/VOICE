@@ -19,23 +19,26 @@ CORES_COUNT = 3
 class Task(object):
     NORMALIZE_POPULATION_SCRIPT_NAME = "normalize_populations.py"
     NORMALIZED_POPULATION_OUT_DIR = "normalized_population"
+    NORMALIZE_LOG_FILE_NAME = "L_value.log"
     OUT_DIR = "out"
     __metaclass__ = ABCMeta
 
-    def __init__(self, in_dir, out_dir):
+    def __init__(self, in_dir, work_dir):
         self.in_dir = in_dir
-        self.normalized_in_dir = os.path.join(out_dir, self.NORMALIZED_POPULATION_OUT_DIR)
-        self.out_dir = os.path.join(out_dir, self.OUT_DIR)
-        if os.path.exists(out_dir):
-            shutil.rmtree(out_dir)
-        os.makedirs(out_dir)
+        self.normalized_in_dir = os.path.join(work_dir, self.NORMALIZED_POPULATION_OUT_DIR)
+        self.normalize_log_file_name = os.path.join(work_dir, self.NORMALIZE_LOG_FILE_NAME)
+        self.out_dir = os.path.join(work_dir, self.OUT_DIR)
+        if os.path.exists(work_dir):
+            shutil.rmtree(work_dir)
+        os.makedirs(work_dir)
         os.makedirs(self.out_dir)
 
     def normalize_samples(self, k_min):
-        subprocess.call([sys.executable, self.NORMALIZE_POPULATION_SCRIPT_NAME,
-                         "-i", self.in_dir,
-                         "-o", self.normalized_in_dir,
-                         "-k", str(k_min)])
+        with open(self.normalize_log_file_name, 'w') as f:
+            subprocess.call([sys.executable, self.NORMALIZE_POPULATION_SCRIPT_NAME,
+                             "-i", self.in_dir,
+                             "-o", self.normalized_in_dir,
+                             "-k", str(k_min)], stdout=f)
 
 
 class TwoHostsTask(Task):
@@ -84,7 +87,8 @@ class TasksManager(object):
         for t in self.tasks:
             t.normalize_samples(k_min)
 
-    def run_simulations(self, simulations_count, L):
+    def run_simulations(self, simulations_count, L, cores_count=None):
         run_simulation_tasks_manager = run_tasks_pool.SimulationManager(self.tasks,
-                                                                        simulations_count, L, CORES_COUNT)
+                                                                        simulations_count, L,
+                                                                        cores_count if cores_count else CORES_COUNT)
         run_simulation_tasks_manager.run()
