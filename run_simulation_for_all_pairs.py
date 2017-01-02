@@ -146,7 +146,7 @@ for pair in pairs:
     if not already_completed:
         pairs_to_complete.append(pair)
     else:
-        print("Simulation for pair " + list(pair)[0]  + '_to_' + list(pair)[1] + ' has already been completed. Skipping.')
+        print("Simulation for pair " + list(pair)[0]  + '_vs_' + list(pair)[1] + ' has already been completed. Skipping.')
 
 print('Pairs to be completed: ' + str(len(pairs_to_complete)))
 

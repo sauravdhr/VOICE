@@ -6,7 +6,7 @@ Email: sergey.n.knyazev@gmail.com
 Created: 12/30/16
 """
 import argparse
-import simulation_tasks
+import simulation_tasks_manager
 
 
 OUT_DIR = './results'
@@ -33,7 +33,7 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    tasks = simulation_tasks.TasksManager(args.tasks_file, args.out_dir)
+    tasks = simulation_tasks_manager.TasksManager(args.tasks_file, args.out_dir)
     tasks.init_tasks()
     tasks.normalize_populations(args.k_min)
     tasks.run_simulations(args.simulations_count, args.L)

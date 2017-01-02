@@ -13,7 +13,7 @@ import propagation
 import graph_utils
 import argparse
 
-OUT_DIR = "out/graphs"
+OUT_DIR = "results"
 DEFAULT_SIMULATIONS_NUMBER = 5
 DEFAULT_N = 100
 
@@ -61,13 +61,13 @@ def main(fastas, out_dir, simulations_count, L):
         L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
 
     fastas_basenames = [os.path.splitext(os.path.basename(f))[0] for f in fastas]
-    out_dir = out_dir + '/' + fastas_basenames[0] + '_to_' + fastas_basenames[1]
+    out_dir = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1])
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
     source_nodes_indices = get_source_nodes_indices(sequences_sets, indices_of_copies, sources)
 
-    sources_nodes_file = os.path.join(out_dir, fastas_basenames[0] + '_to_' + fastas_basenames[1] + '.data')
+    sources_nodes_file = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1] + '.data')
     with open(sources_nodes_file, 'w') as f:
         for i, s in enumerate(source_nodes_indices):
             f.write(str(fastas_basenames[i]) + ' ' + ' '.join(str(e) for e in s) + '\n')

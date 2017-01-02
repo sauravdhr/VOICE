@@ -9,29 +9,30 @@ import subprocess
 import sys
 import os
 import shutil
-import run_simulation_tasks
+import run_tasks_pool
 from abc import ABCMeta, abstractmethod
 
 
-NORMALIZE_POPULATION_SCRIPT_NAME = "normalize_populations.py"
-NORMALIZED_POPULATION_OUT_DIR = "normalized_population"
 CORES_COUNT = 3
 
 
 class Task(object):
+    NORMALIZE_POPULATION_SCRIPT_NAME = "normalize_populations.py"
+    NORMALIZED_POPULATION_OUT_DIR = "normalized_population"
+    OUT_DIR = "out"
     __metaclass__ = ABCMeta
 
     def __init__(self, in_dir, out_dir):
         self.in_dir = in_dir
-        self.normalized_in_dir = os.path.join(out_dir, NORMALIZED_POPULATION_OUT_DIR)
-        self.out_dir = out_dir
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        self.normalized_in_dir = os.path.join(out_dir, self.NORMALIZED_POPULATION_OUT_DIR)
+        self.out_dir = os.path.join(out_dir, self.OUT_DIR)
+        if os.path.exists(out_dir):
+            shutil.rmtree(out_dir)
+        os.makedirs(out_dir)
+        os.makedirs(self.out_dir)
 
-    def normalize_samples(self, k_min, out_dir=None):
-        if not out_dir:
-            out_dir = self.out_dir
-        subprocess.call([sys.executable, NORMALIZE_POPULATION_SCRIPT_NAME,
+    def normalize_samples(self, k_min):
+        subprocess.call([sys.executable, self.NORMALIZE_POPULATION_SCRIPT_NAME,
                          "-i", self.in_dir,
                          "-o", self.normalized_in_dir,
                          "-k", str(k_min)])
@@ -84,6 +85,6 @@ class TasksManager(object):
             t.normalize_samples(k_min)
 
     def run_simulations(self, simulations_count, L):
-        run_simulation_tasks_manager = run_simulation_tasks.SimulationManager(self.tasks,
-                                                                              simulations_count, L, CORES_COUNT)
+        run_simulation_tasks_manager = run_tasks_pool.SimulationManager(self.tasks,
+                                                                        simulations_count, L, CORES_COUNT)
         run_simulation_tasks_manager.run()
