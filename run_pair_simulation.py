@@ -61,9 +61,9 @@ def main(fastas, out_dir, simulations_count, L):
         L = network_creator.get_count_of_heterogeneous_positions(sequences_sets[0] + sequences_sets[1])
 
     fastas_basenames = [os.path.splitext(os.path.basename(f))[0] for f in fastas]
-#    out_dir = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1])
-#    if not os.path.exists(out_dir):
-#        os.mkdir(out_dir)
+    out_dir = os.path.join(out_dir, fastas_basenames[0] + '_vs_' + fastas_basenames[1])
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
 
     source_nodes_indices = get_source_nodes_indices(sequences_sets, indices_of_copies, sources)
 
