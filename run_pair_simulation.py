@@ -6,7 +6,6 @@ Email: sergey.n.knyazev@gmail.com
 Created: 12.01.2016
 """
 
-import sys
 import os
 import network_creator
 import network_propagation
@@ -110,9 +109,9 @@ def main(fastas, out_dir, simulations_count, L):
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("fasta1",
+    parser.add_argument("fasta1", required=True,
                         help="Fasta file for 1st host.")
-    parser.add_argument("fasta2",
+    parser.add_argument("fasta2", required=True,
                         help="Fasta file for 2nd host.")
     parser.add_argument("-o", dest='out_dir', type=str, default=OUT_DIR,
                         help="Path to an output directory relative to input dir. "
