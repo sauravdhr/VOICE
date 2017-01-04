@@ -11,6 +11,7 @@ import network_creator
 import network_propagation
 import graph_utils
 import argparse
+import sys
 
 OUT_DIR = "results"
 DEFAULT_SIMULATIONS_NUMBER = 5
@@ -109,9 +110,9 @@ def main(fastas, out_dir, simulations_count, L):
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("fasta1", required=True,
+    parser.add_argument("fasta1",
                         help="Fasta file for 1st host.")
-    parser.add_argument("fasta2", required=True,
+    parser.add_argument("fasta2",
                         help="Fasta file for 2nd host.")
     parser.add_argument("-o", dest='out_dir', type=str, default=OUT_DIR,
                         help="Path to an output directory relative to input dir. "
@@ -125,5 +126,6 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
+    print(sys.argv)
     args = parse_arguments()
     main([args.fasta1, args.fasta2], args.out_dir, args.simulations_count, args.L)
