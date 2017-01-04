@@ -11,7 +11,6 @@ import network_creator
 import network_propagation
 import graph_utils
 import argparse
-import sys
 
 OUT_DIR = "results"
 DEFAULT_SIMULATIONS_NUMBER = 5
@@ -126,6 +125,5 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
-    print(sys.argv)
     args = parse_arguments()
     main([args.fasta1, args.fasta2], args.out_dir, args.simulations_count, args.L)
