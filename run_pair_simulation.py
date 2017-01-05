@@ -75,7 +75,7 @@ def main(fastas, out_dir, simulations_count, L):
                         sequences_sets[1] + [sequences_sets[0][i] for i in sources[0]]]
 
     graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
-        sequences, False).get_minimal_connected_graph(), L) for sequences in graphs_sequences]
+        sequences, False).get_graph(), L) for sequences in graphs_sequences]
 
     out_file_dots = [None] * len(graphs)
     out_file_jsons = [None] * len(graphs)

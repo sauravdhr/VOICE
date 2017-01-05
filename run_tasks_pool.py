@@ -82,10 +82,11 @@ class ProcessPool(object):
         for i in range(len(self.subprocesses)):
             if not self.subprocesses[i]:
                 print('Launching simulation for pair: ' + task[0] + ' ' + task[1])
-                self.subprocesses[i] = subprocess.Popen(
-                    [sys.executable, 'run_pair_simulation.py', task[0], task[1],
-                     '-o', out_dir, '-n', self.simulations_count, '-L', self.L],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd = [sys.executable, 'run_pair_simulation.py', task[0], task[1],
+                       '-o', out_dir, '-n', self.simulations_count]
+                if self.L:
+                    cmd.extend(['-L', self.L])
+                self.subprocesses[i] = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 return True
         return False
 

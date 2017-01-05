@@ -107,8 +107,8 @@ if __name__=='__main__':
 
     for fname in fastas:
         fasta = fastas[fname]
-        if len(fasta) < k:
-            continue
+#        if len(fasta) < k:
+#            continue
         res = cluster_and_consensus(fasta, k) if len(fasta) > k + 1 else fasta
         SeqIO.write(res, open("%s/%s" % (output, fname), 'w+'), 'fasta')
 

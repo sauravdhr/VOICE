@@ -184,33 +184,6 @@ def get_count_of_heterogeneous_positions(sequences):
                 break
     return count_of_heterogeneous_positions
 
-'''
-def find_all_medians_between_two_sets(sequences1, sequences2):
-    medians = []
-    sequences = [sequences1, sequences2]
-    n = [len(sequences1), len(sequences2)]
-
-    for order in [[0, 1], [1, 0]]:
-        for i in range(n[order[0]]-1):
-            for j in range(i+1, n[order[0]]):
-                for k in range(n[order[1]]):
-                    median = get_median(sequences[order[0]][i], sequences[order[0]][j], sequences[order[1]][k])
-                    if median:
-                        medians.append(median)
-    return filter_repeated_sequences(medians)
-
-
-def find_all_medians_between_two_sets_for_similar_sequences(sequences1, sequences2, max_dist):
-    medians = []
-    sequences = [sequences1, sequences2]
-    similar_sequences = [get_sets_of_similar_sequences(s, max_dist) for s in sequences]
-    for order in [[0, 1], [1, 0]]:
-        for seqs in similar_sequences[order[0]]:
-            medians += find_all_medians_between_two_sets(seqs, sequences[order[1]])
-    return filter_repeated_sequences(medians)
-
-'''
-
 
 class Graph(object):
     def __init__(self, vertices, edges):
@@ -237,19 +210,30 @@ class DistanceGraphBuilder(object):
             self.medians = self.infer_medians(self.sequences)
         self.vertices = self.infer_vertices()
         self.distance_matrix = infer_distance_matrix(self.sequences + self.medians)
-        self.minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(
-            self.distance_matrix)
+#        self.minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(
+#            self.distance_matrix)
 
     def infer_vertices(self):
         return [{'sequence': s, 'type': VertexType.original} for s in self.sequences]\
                + [{'sequence': m, 'type': VertexType.median} for m in self.medians]
 
-    def get_minimal_connected_graph(self):
+#    def get_minimal_connected_graph(self):
+#        edges = list()
+#        for vertex_ind in range(len(self.sequences + self.medians)):
+#           adjacent_vertices = list()
+#            for adj_vertex_ind in range(len(self.sequences + self.medians)):
+#                d = self.minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
+#                if d is not None and d != 0:
+#                    adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
+#            edges.append(adjacent_vertices)
+#        return Graph(self.vertices, edges)
+
+    def get_graph(self):
         edges = list()
         for vertex_ind in range(len(self.sequences + self.medians)):
             adjacent_vertices = list()
             for adj_vertex_ind in range(len(self.sequences + self.medians)):
-                d = self.minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
+                d = self.distance_matrix[vertex_ind, adj_vertex_ind]
                 if d is not None and d != 0:
                     adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
             edges.append(adjacent_vertices)
@@ -259,49 +243,16 @@ class DistanceGraphBuilder(object):
     def infer_medians(sequences):
         return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
 
-    '''
-    @staticmethod
-    def infer_medians(sequences, max_dist_for_medians):
-        filtered_sequences = filter_repeated_sequences(sequences)
-        medians = []
-        old_n = 0
-        new_n = 0
-        while True:
-            medians += find_medians_for_similar_sequences(filtered_sequences + medians[old_n:new_n], max_dist_for_medians)
-            medians = get_sequence_sets_difference(filter_repeated_sequences(medians), filtered_sequences)
-            old_n = new_n
-            new_n = len(medians)
-            if old_n == new_n:
-                break
-        return medians
-
-    @staticmethod
-    def infer_medians2(sequences, max_dist_for_medians):
-        filtered_sequences = filter_repeated_sequences(sequences)
-        medians = get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), filtered_sequences)
-        old_n = 0
-        new_n = len(medians)
-        while True:
-            medians += find_all_medians_between_two_sets_for_similar_sequences(
-                filtered_sequences + medians[:new_n], medians[new_n:], max_dist_for_medians)
-            medians = get_sequence_sets_difference(filter_repeated_sequences(medians), filtered_sequences)
-            old_n = new_n
-            new_n = len(medians)
-            if old_n == new_n:
-                break
-        return medians
-    '''
-
-    @staticmethod
-    def construct_minimal_connected_graph_matrix(distance_matrix):
-        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
-        min_length = max([max(e) for e in mst.toarray().astype(int)] + [DistanceGraphBuilder.MIN_SEQS_DIST_THRESHOLD])
-        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
-        for i, row in enumerate(minimal_connected_graph_matrix):
-            for j, length in enumerate(row):
-                if length and length > min_length:
-                    minimal_connected_graph_matrix[i, j] = None
-        return minimal_connected_graph_matrix
+#    @staticmethod
+#    def construct_minimal_connected_graph_matrix(distance_matrix):
+#        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
+#        min_length = max([max(e) for e in mst.toarray().astype(int)] + [DistanceGraphBuilder.MIN_SEQS_DIST_THRESHOLD])
+#        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
+#        for i, row in enumerate(minimal_connected_graph_matrix):
+#            for j, length in enumerate(row):
+#                if length and length > min_length:
+#                    minimal_connected_graph_matrix[i, j] = None
+#        return minimal_connected_graph_matrix
 
 
 class ProbabilityGraphBuilder(object):
@@ -428,7 +379,7 @@ def main(fasta_name, search_for_medians):
     print(L)
 
     graph = ProbabilityGraphBuilder(DistanceGraphBuilder(
-        sequences_set, search_for_medians).get_minimal_connected_graph(), L)
+        sequences_set, search_for_medians).get_graph(), L)
 
     fasta_basename = os.path.splitext(os.path.basename(fasta_name))[0]
 
