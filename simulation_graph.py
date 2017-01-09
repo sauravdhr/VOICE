@@ -22,7 +22,8 @@ class SimulationDistGraph(object):
         for i in [0, 1]:
             if self.borders_consensuses[i] not in self.seqs[i]:
                 self.seqs[i].append(self.borders_consensuses[i])
-        self.hamming_dist_graphs = [hamming_dist_graph.HammingDistGraph(s) for s in self.seqs]
+#        self.hamming_dist_graphs = [hamming_dist_graph.HammingDistGraph(s) for s in self.seqs]
+        self.hamming_dist_graphs = [hamming_dist_graph.HammingDistGraph(s) for s in self.borders_seqs]
         consensuses_dist = hamming_dist_graph.hamming_distance(self.borders_consensuses[0], self.borders_consensuses[1])
         for (i, j) in [(0, 1), (1, 0)]:
             if self.borders_consensuses[i] not in self.seqs[j]:
