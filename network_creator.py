@@ -6,20 +6,22 @@ Email: sergey.n.knyazev@gmail.com
 Created: 12.01.2016
 """
 
+import copy
+import itertools
+import json
+import math
 import os
 import sys
-from Bio import SeqIO
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import minimum_spanning_tree
 from enum import Enum
 
-import itertools
-import math
-import copy
-from graphviz import Digraph
 import networkx as nx
+from Bio import SeqIO
+from graphviz import Digraph
 from networkx.readwrite import json_graph
-import json
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree
+
+from hamming_dist_graph import hamming_distance
 
 MUTATION_PROBABILITY = 0.01
 OUT_DIR = "out/graphs"
@@ -88,13 +90,6 @@ class MatrixIterator(object):
             return self.matrix.get_row(self.i-1)
         else:
             raise StopIteration()
-
-
-def hamming_distance(s1, s2):
-    #Return the Hamming distance between equal-length sequences
-    if len(s1) != len(s2):
-        raise ValueError("Undefined for sequences of unequal length")
-    return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
 
 def filter_repeated_sequences(sequences):
@@ -217,17 +212,6 @@ class DistanceGraphBuilder(object):
         return [{'sequence': s, 'type': VertexType.original} for s in self.sequences]\
                + [{'sequence': m, 'type': VertexType.median} for m in self.medians]
 
-#    def get_minimal_connected_graph(self):
-#        edges = list()
-#        for vertex_ind in range(len(self.sequences + self.medians)):
-#           adjacent_vertices = list()
-#            for adj_vertex_ind in range(len(self.sequences + self.medians)):
-#                d = self.minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
-#                if d is not None and d != 0:
-#                    adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
-#            edges.append(adjacent_vertices)
-#        return Graph(self.vertices, edges)
-
     def get_graph(self):
         edges = list()
         for vertex_ind in range(len(self.sequences + self.medians)):
@@ -243,16 +227,28 @@ class DistanceGraphBuilder(object):
     def infer_medians(sequences):
         return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
 
-#    @staticmethod
-#    def construct_minimal_connected_graph_matrix(distance_matrix):
-#        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
-#        min_length = max([max(e) for e in mst.toarray().astype(int)] + [DistanceGraphBuilder.MIN_SEQS_DIST_THRESHOLD])
-#        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
-#        for i, row in enumerate(minimal_connected_graph_matrix):
-#            for j, length in enumerate(row):
-#                if length and length > min_length:
-#                    minimal_connected_graph_matrix[i, j] = None
-#        return minimal_connected_graph_matrix
+    @staticmethod
+    def construct_minimal_connected_graph_matrix(distance_matrix):
+        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
+        min_length = max([max(e) for e in mst.toarray().astype(int)] + [DistanceGraphBuilder.MIN_SEQS_DIST_THRESHOLD])
+        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
+        for i, row in enumerate(minimal_connected_graph_matrix):
+            for j, length in enumerate(row):
+                if length and length > min_length:
+                    minimal_connected_graph_matrix[i, j] = None
+        return minimal_connected_graph_matrix
+
+    def get_minimal_connected_graph(self):
+        edges = list()
+        minimal_connected_graph_matrix = self.construct_minimal_connected_graph_matrix(self.distance_matrix)
+        for vertex_ind in range(len(self.sequences + self.medians)):
+            adjacent_vertices = list()
+            for adj_vertex_ind in range(len(self.sequences + self.medians)):
+                d = minimal_connected_graph_matrix[vertex_ind, adj_vertex_ind]
+                if d is not None and d != 0:
+                    adjacent_vertices.append((adj_vertex_ind, {"weight": d}))
+            edges.append(adjacent_vertices)
+        return Graph(self.vertices, edges)
 
 
 class ProbabilityGraphBuilder(object):

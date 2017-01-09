@@ -108,7 +108,7 @@ class Propagator(object):
 
 
 def main():
-    network = graph_utils.import_graph(FILE_NAME)
+    network = graph_utils.import_graph_from_json(FILE_NAME)
     print(Propagator(network, LOG_FILE_NAME).propagate([10]))
 
 

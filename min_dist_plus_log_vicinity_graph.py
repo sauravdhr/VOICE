@@ -8,7 +8,10 @@ Created: 1/4/17
 import argparse
 import networkx as nx
 import os
+
+import hamming_dist_graph
 import network_creator
+import math
 
 
 INF = 10e6
@@ -27,9 +30,12 @@ class MinDistanceGraph(object):
         fasta_files_names = os.listdir(outbreak_folder)
         for i in range(len(fasta_files_names)-1):
             for j in range(i+1, len(fasta_files_names)):
-                weight = MinDistanceGraph.get_min_dist(os.path.join(outbreak_folder, fasta_files_names[i]),
-                                                       os.path.join(outbreak_folder,fasta_files_names[j]))
-                edges.append((fasta_files_names[i], fasta_files_names[j], weight))
+                min_dist = MinDistanceGraph.get_min_dist(os.path.join(outbreak_folder, fasta_files_names[i]),
+                                                         os.path.join(outbreak_folder, fasta_files_names[j]))
+                vicinity = MinDistanceGraph.get_vicinity(os.path.join(outbreak_folder, fasta_files_names[i]),
+                                                         os.path.join(outbreak_folder, fasta_files_names[j]),
+                                                         min_dist - 1)
+                edges.append((fasta_files_names[i], fasta_files_names[j], min_dist + 3.5 * math.log(vicinity)))
             print("{0} is done out of {1}".format(i+1, len(fasta_files_names)-1))
         return edges
 
@@ -40,11 +46,22 @@ class MinDistanceGraph(object):
         min_dist = INF
         for i in range(len(seqs1)):
             for j in range(len(seqs2)):
-                dist = network_creator.hamming_distance(seqs1[i], seqs2[j])
+                dist = hamming_dist_graph.hamming_distance(seqs1[i], seqs2[j])
                 if dist < min_dist:
                     min_dist = dist
         return min_dist
 
+    @staticmethod
+    def get_vicinity(fasta1_file_name, fasta2_file_name, max_edge_length):
+        seqs1 = network_creator.parse_fasta(fasta1_file_name)
+        seqs2 = network_creator.parse_fasta(fasta2_file_name)
+        vicinity = 0
+        for i in range(len(seqs1)):
+            for j in range(len(seqs2)):
+                dist = hamming_dist_graph.hamming_distance(seqs1[i], seqs2[j])
+                if dist >= max_edge_length:
+                    vicinity += 1
+        return vicinity
 
 
 def parse_arguments():

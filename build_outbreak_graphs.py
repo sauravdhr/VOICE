@@ -8,6 +8,8 @@ import sys
 import os
 from os import listdir
 from os.path import isfile, join
+
+import hamming_dist_graph
 import network_creator
 import itertools
 from graphviz import Digraph
@@ -30,7 +32,7 @@ for outbreak in outbreaks:
         current_pair_distances = []
         for sequence_1 in first_sequence_set:
             for sequence_2 in second_sequence_set:
-                d = network_creator.hamming_distance(sequence_1, sequence_2)
+                d = hamming_dist_graph.hamming_distance(sequence_1, sequence_2)
                 current_pair_distances.append(d)
         current_outbreak_pairs_min_distances[pair] = min(current_pair_distances)
     # Graphviz graph (one per outbreak)

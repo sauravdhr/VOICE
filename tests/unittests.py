@@ -7,6 +7,8 @@ Created: 12.01.2016
 """
 
 import unittest
+
+import hamming_dist_graph
 import network_creator
 
 SEQS_0 = ["AAA"]
@@ -29,8 +31,8 @@ MATRIX_FULL = [[0, 21, 31, 41, 51],
 
 class Test(unittest.TestCase):
     def test(self):
-        self.assertEqual(network_creator.hamming_distance("AAA", "AAB"), 1)
-        self.assertEqual(network_creator.hamming_distance("AAA", "AAA"), 0)
+        self.assertEqual(hamming_dist_graph.hamming_distance("AAA", "AAB"), 1)
+        self.assertEqual(hamming_dist_graph.hamming_distance("AAA", "AAA"), 0)
 
         self.assertEqual(network_creator.filter_repeated_sequences(None), None)
         self.assertEqual(network_creator.filter_repeated_sequences([]), [])
