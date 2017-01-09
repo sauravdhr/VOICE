@@ -327,6 +327,32 @@ def main1():
     print(float(total_found_sources/total_nodes_count))
 
 
+def report_wrong_directions(simulation_analyzer, outbreak_verified_sources):
+    print("Errors in source detection:")
+    print("1) Before error correction:")
+
+    total_found_sources = 0
+    total_nodes_count = 0
+    for o in VIRIFIED_OUTBREAKS:
+        print('{0}:'.format(o))
+        outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
+        outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
+        found_sources, nodes_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
+        print(outbreak_source)
+        total_found_sources += found_sources
+        total_nodes_count += nodes_count
+    print("True positive: {0}".format(float(total_found_sources / total_nodes_count)))
+    print("Wrong directions:")
+
+
+def main2():
+    simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
+    outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
+
+    report_wrong_directions(simulation_analyzer, outbreak_verified_sources)
+
+
 if __name__ == '__main__':
-    main()
-    main1()
+#    main()
+#    main1()
+    main2()
