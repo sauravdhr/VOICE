@@ -14,12 +14,12 @@ import numpy as np
 SOURCES_FILE_NAME = 'data/sources.txt'
 CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
 ANTI_CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
-#MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
+MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
 SIMULATION_EDGE_LIST_FULL = 'data/all_clipped_full_graph_simulation.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
 VIRIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
-GRAPH = ANTI_CENTRALITY_GRAPH
+GRAPH = SIMULATION_EDGE_LIST
 
 
 class SourceFinder(object):
@@ -263,7 +263,7 @@ def get_outbreak_verified_sources(file_name):
 
 def main():
 #    args = parse_arguments()
-    simulation_analyzer = DirectedGraphAnalyzer(SIMULATION_EDGE_LIST)
+    simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
     print(simulation_analyzer.get_zero_type_I_error_thresholds())
     print(simulation_analyzer.get_zero_type_II_error_threshold())
@@ -328,5 +328,5 @@ def main1():
 
 
 if __name__ == '__main__':
-#    main()
+    main()
     main1()

@@ -35,34 +35,34 @@ class ProbabilityGraph(graph_utils.Graph):
         self.mark_nodes(simulation_graph)
 
 
-    def build_edges(self, simulation_graph):
+    def build_edges(self, simulation_dist_graph):
 #            self.graph.add_edge(node, node)
 #            self.graph[node][node]['weight'] = self.c
-        for edge in simulation_graph.edges():
-            self.add_artificial_edges(edge[0], edge[1], simulation_graph[edge[0]][edge[1]]['weight'])
+        for edge in simulation_dist_graph.edges():
+            self.add_artificial_edges(edge[0], edge[1], simulation_dist_graph[edge[0]][edge[1]]['weight'])
 
     def add_artificial_edges(self, u, v, weight):
         if weight == 1:
             self.graph.add_edge(u, v)
             self.graph[u][v]['weight'] = self.unit_edge_probability
             return
-        new_last_node_number = self.artificial_nodes_counter + weight - 1
-        for i in range(self.artificial_nodes_counter, new_last_node_number):
+        new_artificial_node_counter = self.artificial_nodes_counter + weight - 1
+        for i in range(self.artificial_nodes_counter, new_artificial_node_counter + 1):
             if i == self.artificial_nodes_counter:
                 self.graph.add_edge(u, i)
                 self.graph[u][i]['weight'] = self.unit_edge_probability
-            elif i == new_last_node_number - 1:
+            elif i == new_artificial_node_counter:
                 self.graph.add_edge(i-1, v)
                 self.graph[i-1][v]['weight'] = self.unit_edge_probability
             else:
                 self.graph.add_edge(i-1, i)
                 self.graph[i-1][i]['weight'] = self.unit_edge_probability
-        self.artificial_nodes_counter = new_last_node_number
+        self.artificial_nodes_counter = new_artificial_node_counter
 
-    def mark_nodes(self, simulation_graph):
-        for node in simulation_graph.nodes():
+    def mark_nodes(self, simulation_dist_graph):
+        for node in simulation_dist_graph.nodes():
             self.graph.node[node]['original'] = True
-            if 'source' in simulation_graph.node[node]:
+            if 'source' in simulation_dist_graph.node[node]:
                 self.graph.node[node]['source'] = True
                 self.source = node
 
