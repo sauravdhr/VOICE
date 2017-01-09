@@ -42,7 +42,7 @@ def find_closest_sequences(seqs1, seqs2, vicinity=0):
         seqs_pairs = []
         for s1 in seqs1:
             for s2 in seqs2:
-                if min_dist <= hamming_distance(s1, s2) - vicinity:
+                if min_dist <= hamming_distance(s1, s2) + vicinity:
                     seqs_pairs.append((s1, s2))
     return seqs_pairs
 

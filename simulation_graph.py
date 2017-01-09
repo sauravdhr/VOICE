@@ -16,7 +16,8 @@ class SimulationDistGraph(object):
 
     def __init__(self, seqs1, seqs2):
         self.seqs = [seqs1[:], seqs2[:]]
-        self.borders_seqs = hamming_dist_graph.find_closest_sequences(seqs1, seqs2, self.BASE_BORDER_VICINITY)
+        closest_seqs = hamming_dist_graph.find_closest_sequences(seqs1, seqs2, self.BASE_BORDER_VICINITY)
+        self.borders_seqs = [[x[0] for x in closest_seqs], [x[1] for x in closest_seqs]]
         self.borders_consensuses = [hamming_dist_graph.find_consensus(s) for s in self.borders_seqs]
         for i in [0, 1]:
             if self.borders_consensuses[i] not in self.seqs[i]:
