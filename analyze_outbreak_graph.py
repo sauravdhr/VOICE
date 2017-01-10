@@ -14,11 +14,14 @@ import numpy as np
 SOURCES_FILE_NAME = 'data/sources.txt'
 CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
 ANTI_CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
+#MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
+#MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist_vicinity2_5.txt'
 MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
 SIMULATION_EDGE_LIST_FULL = 'data/all_clipped_full_graph_simulation.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
+SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
 SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
-VIRIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
+VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
 GRAPH = SIMULATION_EDGE_LIST
 
 
@@ -108,7 +111,6 @@ class GraphAnalyzer(object):
         self.outbreaks_nodes_dict = self.infer_outbreaks_nodes(self.graph)
         self.unrelated_edges = self.get_unrelated_edges(self.graph, self.graph.edges())
         self.related_edges = self.get_related_edges(self.graph, self.graph.edges())
-#        self.thresholds = self.get_thresholds(self.graph)
 
     @staticmethod
     def infer_outbreaks_nodes(graph):
@@ -205,6 +207,22 @@ class GraphAnalyzer(object):
                     threshold = new_threshold
         return threshold
 
+    def get_preserved_clusters_number(self, threshold):
+        preserved_clusters_count = 0
+        clusters_count = 0
+        for k in self.outbreaks_nodes_dict.keys():
+            if k[:2] != self.UNRELATED:
+                if self.find_bridge_length(k) <= threshold:
+                    preserved_clusters_count += 1
+                clusters_count += 1
+        return [preserved_clusters_count, clusters_count]
+
+    def get_true_related_number(self, threshold):
+        return sum(map(lambda x: x[2] >= threshold, self.unrelated_edges)), len(self.unrelated_edges)
+
+    def get_true_unrelated_number(self, threshold):
+        return sum(map(lambda x: x[2] <= threshold, self.related_edges)), len(self.related_edges)
+
 
 class DirectedGraphAnalyzer(GraphAnalyzer):
     def __init__(self, edges_list_file_name):
@@ -255,13 +273,7 @@ def get_outbreak_verified_sources(file_name):
     return dict(zip([x[:2] for x in sources], sources))
 
 
-#def parse_arguments():
-#    arguments_parser = argparse.ArgumentParser('Outbreak graph analyzer.')
-#    arguments_parser.add_argument('edges_list_file_name', help='file with edges of an outbreak graph')
-#    return arguments_parser.parse_args()
-
-
-def main():
+def main0():
 #    args = parse_arguments()
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
@@ -304,37 +316,11 @@ def main():
 #    plt.show()
 
 
-def main1():
-    simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
-    outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
-
-#    print("Source by cost")
-#    for o in VIRIFIED_OUTBREAKS:
-#        outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
-#        print(outbreak_graph.find_source_by_star_total_cost())
-    print("Source by edges number")
-    total_found_sources = 0
-    total_nodes_count = 0
-    for o in VIRIFIED_OUTBREAKS:
-        print('{0}:'.format(o))
-        outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
-        outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
-        found_sources, nodes_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
-        print(outbreak_source)
-        total_found_sources += found_sources
-        total_nodes_count += nodes_count
-
-    print(float(total_found_sources/total_nodes_count))
-
-
-def report_wrong_directions(simulation_analyzer, outbreak_verified_sources):
-    print("Errors in source detection:")
-    print("1) Before error correction:")
-
+def report_outbreaks_quality(simulation_analyzer, outbreak_verified_sources):
     total_found_sources = 0
     total_seqs_count = 0
     found_sources_count = 0
-    for o in VIRIFIED_OUTBREAKS:
+    for o in VERIFIED_OUTBREAKS:
         outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
         outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
         if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
@@ -342,19 +328,87 @@ def report_wrong_directions(simulation_analyzer, outbreak_verified_sources):
         found_sources, seqs_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
         total_found_sources += found_sources
         total_seqs_count += seqs_count
-    print("Found sources: {0} of {1}".format(found_sources_count, len(VIRIFIED_OUTBREAKS)))
-    print("Found directions: {0} of {1}".format(total_found_sources, total_seqs_count))
-    print("True positive: {0}".format(float(total_found_sources / total_seqs_count)))
+    print("#######")
+    print("Found true sources: {0} of {1}".format(found_sources_count, len(VERIFIED_OUTBREAKS)))
+    print("True rate: {0}".format(float(found_sources_count) / len(VERIFIED_OUTBREAKS)))
+    print("#######")
+    print("Found true directions: {0} of {1}".format(total_found_sources, total_seqs_count))
+    print("True rate: {0}".format(float(total_found_sources) / total_seqs_count))
+    print("#######")
 
 
-def main2():
+def report_relatedness(simulation_analyzer, min_dist_analyzer):
+    zero_unrelated_thr_simulation = simulation_analyzer.get_zero_type_I_error_thresholds()
+    zero_broken_outbreaks_thr_simulation = simulation_analyzer.get_zero_type_II_error_threshold()
+
+    zero_unrelated_thr_min_dist = min_dist_analyzer.get_zero_type_I_error_thresholds()
+    zero_broken_outbreaks_thr_min_dist = min_dist_analyzer.get_zero_type_II_error_threshold()
+
+    print("-------")
+    print("Thresholds for simulation:")
+    print("No unrelated edges: {0}".format(zero_unrelated_thr_simulation))
+    print("No outbreak breakage: {0}".format(zero_broken_outbreaks_thr_simulation))
+    print("-------")
+    print("Thresholds for min dist method:")
+    print("No unrelated edges: {0}".format(zero_unrelated_thr_min_dist))
+    print("No outbreak breakage: {0}".format(zero_broken_outbreaks_thr_min_dist))
+    print("-------")
+
+    preserved_clusters_number_simulation = simulation_analyzer.get_preserved_clusters_number(zero_unrelated_thr_simulation)
+    true_related_number_simulation = simulation_analyzer.get_true_related_number(zero_broken_outbreaks_thr_simulation)
+    true_unrelated_number_simulation = simulation_analyzer.get_true_unrelated_number(zero_unrelated_thr_simulation)
+
+    preserved_clusters_number_min_dist = min_dist_analyzer.get_preserved_clusters_number(zero_unrelated_thr_min_dist)
+    true_related_number_min_dist = min_dist_analyzer.get_true_related_number(zero_broken_outbreaks_thr_min_dist)
+    true_unrelated_number_min_dist = min_dist_analyzer.get_true_unrelated_number(zero_unrelated_thr_min_dist)
+
+    print("#######")
+    print('Relatedness correctness for simulations:')
+    print("#######")
+    print('Number of true unrelated with thr {0}: {1} of {2}'.format(zero_unrelated_thr_simulation,
+                                                                     true_unrelated_number_simulation[0],
+                                                                     true_unrelated_number_simulation[1]))
+    print("True rate: {0}".format(float(true_unrelated_number_simulation[0]) / true_unrelated_number_simulation[1]))
+    print("-------")
+    print('Number of preserved clusters with thr {0}: {1} of {2}'.format(zero_unrelated_thr_simulation,
+                                                                         preserved_clusters_number_simulation[0],
+                                                                         preserved_clusters_number_simulation[1]))
+    print("True rate: {0}".format(float(preserved_clusters_number_simulation[0])
+                                  / preserved_clusters_number_simulation[1]))
+    print("-------")
+    print('Number of true positive related pairs with thr {0}: {1} of {2}'.format(zero_broken_outbreaks_thr_simulation,
+                                                                                  true_related_number_simulation[0],
+                                                                                  true_related_number_simulation[1]))
+    print("True rate: {0}".format(float(true_related_number_simulation[0]) / true_related_number_simulation[1]))
+    print("#######")
+    print('Relatedness correctness for min dist method:')
+    print("#######")
+    print('Number of true unrelated with thr {0}: {1} of {2}'.format(zero_unrelated_thr_min_dist,
+                                                                     true_unrelated_number_min_dist[0],
+                                                                     true_unrelated_number_min_dist[1]))
+    print("True rate: {0}".format(float(true_unrelated_number_min_dist[0]) / true_unrelated_number_min_dist[1]))
+    print("-------")
+    print('Number of preserved clusters with thr {0}: {1} of {2}'.format(zero_unrelated_thr_min_dist,
+                                                                         preserved_clusters_number_min_dist[0],
+                                                                         preserved_clusters_number_min_dist[1]))
+    print("True rate: {0}".format(float(preserved_clusters_number_min_dist[0]) / preserved_clusters_number_min_dist[1]))
+    print("-------")
+    print('Number of true positive related pairs with thr {0}: {1} of {2}'.format(zero_broken_outbreaks_thr_min_dist,
+                                                                                  true_related_number_min_dist[0],
+                                                                                  true_related_number_min_dist[1]))
+
+    print("True rate: {0}".format(float(true_related_number_min_dist[0]) / true_related_number_min_dist[1]))
+    print("-------")
+
+
+def main():
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
+    min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-    report_wrong_directions(simulation_analyzer, outbreak_verified_sources)
+    report_outbreaks_quality(simulation_analyzer, outbreak_verified_sources)
+    report_relatedness(simulation_analyzer, min_dist_analyzer)
 
 
 if __name__ == '__main__':
-#    main()
-#    main1()
-    main2()
+    main()

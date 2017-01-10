@@ -11,8 +11,8 @@ import multiprocessing
 import time
 import sys
 
-#NAME_OF_SIMULATION_SCRIPT = 'run_pair_simulation.py'
-NAME_OF_SIMULATION_SCRIPT = 'pair_simulation.py'
+NAME_OF_SIMULATION_SCRIPT = 'run_pair_simulation.py'
+#NAME_OF_SIMULATION_SCRIPT = 'pair_simulation.py'
 LAUNCH_PERIOD = 1
 
 
