@@ -73,7 +73,7 @@ class SourceFinder(object):
         source = None
         for v in self.outbreak_graph.nodes():
             new_source_cost = f(v)
-            print('{0} cost: {1}'.format(v, new_source_cost))
+#            print('{0} cost: {1}'.format(v, new_source_cost))
             if new_source_cost < source_cost:
                 source = v
                 source_cost = new_source_cost
@@ -96,10 +96,7 @@ class SourceFinder(object):
         true_determined = len(list(
             filter(lambda v: self.outbreak_graph[v[0]][v[1]]['weight'] < self.outbreak_graph[v[1]][v[0]]['weight'],
                    out_edges)))
-        false_determined = len(list(
-            filter(lambda v: self.outbreak_graph[v[0]][v[1]]['weight'] >= self.outbreak_graph[v[1]][v[0]]['weight'],
-                   out_edges)))
-        return true_determined, len(out_edges), false_determined
+        return true_determined, len(out_edges)
 
 
 class GraphAnalyzer(object):
@@ -322,7 +319,7 @@ def main1():
         print('{0}:'.format(o))
         outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
         outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
-        found_sources, nodes_count, false_determined = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
+        found_sources, nodes_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
         print(outbreak_source)
         total_found_sources += found_sources
         total_nodes_count += nodes_count
@@ -335,19 +332,19 @@ def report_wrong_directions(simulation_analyzer, outbreak_verified_sources):
     print("1) Before error correction:")
 
     total_found_sources = 0
-    total_nodes_count = 0
-    total_false_determined = 0
+    total_seqs_count = 0
+    found_sources_count = 0
     for o in VIRIFIED_OUTBREAKS:
-        print('{0}:'.format(o))
         outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
         outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
-        found_sources, nodes_count, false_determined = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
-        print(outbreak_source)
+        if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
+            found_sources_count += 1
+        found_sources, seqs_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
         total_found_sources += found_sources
-        total_nodes_count += nodes_count
-        total_false_determined += false_determined
-    print("True positive: {0}".format(float(total_found_sources / total_nodes_count)))
-    print("Wrong directions: ") + str(total_false_determined)
+        total_seqs_count += seqs_count
+    print("Found sources: {0} of {1}".format(found_sources_count, len(VIRIFIED_OUTBREAKS)))
+    print("Found directions: {0} of {1}".format(total_found_sources, total_seqs_count))
+    print("True positive: {0}".format(float(total_found_sources / total_seqs_count)))
 
 
 def main2():
