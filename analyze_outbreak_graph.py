@@ -334,17 +334,28 @@ def report_wrong_directions(simulation_analyzer, outbreak_verified_sources):
     total_found_sources = 0
     total_seqs_count = 0
     found_sources_count = 0
+    correct_sources = []
+    incorrect_sources = []
+    incorrect_directions = []
     for o in VIRIFIED_OUTBREAKS:
         outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
         outbreak_source = outbreak_graph.find_sorce_by_shortest_path_tree()
         if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
             found_sources_count += 1
+            correct_sources.append(outbreak_source)
+        else:
+            incorrect_sources.append(outbreak_source)
         found_sources, seqs_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
         total_found_sources += found_sources
         total_seqs_count += seqs_count
     print("Found sources: {0} of {1}".format(found_sources_count, len(VIRIFIED_OUTBREAKS)))
+    print("Correctly identified sources: ")
+    for s in correct_sources: print s
+    print("Incorrectly identified sources: ")
+    for s in incorrect_sources: print s
     print("Found directions: {0} of {1}".format(total_found_sources, total_seqs_count))
     print("True positive: {0}".format(float(total_found_sources / total_seqs_count)))
+
 
 
 def main2():
