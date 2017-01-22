@@ -96,7 +96,7 @@ def main(fastas, out_dir, simulations_count, L):
     with open(results_log, 'w') as log:
         log.write('host simulation_number cycles simulation_results_file\n')
         for i, j in [[0, 1], [1, 0]]:
-            network = graph_utils.import_graph(out_file_jsons[i])
+            network = graph_utils.import_graph_from_json(out_file_jsons[i])
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
             for k in range(simulations_count):
                 log_file = f + '_' + str(k) + '.out'

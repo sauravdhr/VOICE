@@ -18,14 +18,16 @@ INF = 10e6
 
 
 class MinDistanceGraph(object):
-    def __init__(self, outbreak_folder):
+    def __init__(self, outbreak_folder, vicinity, log_scale):
         self.outbreak_folder = outbreak_folder
-        self.edges = self.get_edges(outbreak_folder)
+        self.vicinity = vicinity
+        self.log_scale = log_scale
+        self.edges = self.get_edges(outbreak_folder, self.vicinity, self.log_scale)
         self.graph = nx.Graph()
         self.graph.add_weighted_edges_from(self.edges)
 
     @staticmethod
-    def get_edges(outbreak_folder):
+    def get_edges(outbreak_folder, vicinity, log_scale):
         edges = list()
         fasta_files_names = os.listdir(outbreak_folder)
         for i in range(len(fasta_files_names)-1):
@@ -34,8 +36,8 @@ class MinDistanceGraph(object):
                                                          os.path.join(outbreak_folder, fasta_files_names[j]))
                 vicinity = MinDistanceGraph.get_vicinity(os.path.join(outbreak_folder, fasta_files_names[i]),
                                                          os.path.join(outbreak_folder, fasta_files_names[j]),
-                                                         min_dist - 1)
-                edges.append((fasta_files_names[i], fasta_files_names[j], min_dist + 3.5 * math.log(vicinity)))
+                                                         min_dist - vicinity)
+                edges.append((fasta_files_names[i], fasta_files_names[j], min_dist + log_scale * math.log(vicinity)))
             print("{0} is done out of {1}".format(i+1, len(fasta_files_names)-1))
         return edges
 
@@ -70,12 +72,16 @@ def parse_arguments():
                                   help='Directory with outbreak fasta files')
     arguments_parser.add_argument('-o', dest='out_file', type=str, required=True,
                                   help='Name of output file')
+    arguments_parser.add_argument('-v', dest='vicinity', type=int, default=1,
+                                  help='border_vicinity')
+    arguments_parser.add_argument('-l', dest='log_scale', type=int, default=3,
+                                  help='log scale')
     return arguments_parser.parse_args()
 
 
 def main():
     args = parse_arguments()
-    graph = MinDistanceGraph(args.in_dir)
+    graph = MinDistanceGraph(args.in_dir, args.vicinity, args.log_scale)
     nx.write_edgelist(graph.graph, args.out_file)
 
 
