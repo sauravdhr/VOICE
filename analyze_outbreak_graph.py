@@ -104,7 +104,7 @@ class SourceFinder(object):
         return self.centrality[v]
 #        return -self.centrality[v]
 
-    def get_source_true_positive(self, outbreak_verified_source):
+    def get_true_directions(self, outbreak_verified_source):
         verified_source_node = list(
             filter(lambda x: x.split('_')[0] == outbreak_verified_source, self.outbreak_graph.nodes()))[0]
         #verified_source_node = verified_source_node[0]
@@ -112,6 +112,11 @@ class SourceFinder(object):
         true_determined = len(list(
             filter(lambda v: self.outbreak_graph[v[0]][v[1]]['weight'] < self.outbreak_graph[v[1]][v[0]]['weight'],
                    out_edges)))
+        wrong_determined = list(
+            filter(lambda v: self.outbreak_graph[v[0]][v[1]]['weight'] >= self.outbreak_graph[v[1]][v[0]]['weight'],
+                   out_edges))
+        for i in wrong_determined:
+            print("{0}-{1}".format(i[0].split("_")[0], i[1].split("_")[0]))
         return true_determined, len(out_edges)
 
 
@@ -348,6 +353,7 @@ def report_source_finding_quality(graph_analyzer, outbreak_verified_sources, sou
             outbreak_source = outbreak_graph.find_source_by_centrality()
         elif source_finding_method == 'star':
             outbreak_source = outbreak_graph.find_source_by_star_median()
+        print("Source: found - {0}, real - {1}".format(outbreak_source.split('_')[0], outbreak_verified_sources[o]))
         if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
             found_sources_count += 1
     print("#######")
@@ -357,16 +363,16 @@ def report_source_finding_quality(graph_analyzer, outbreak_verified_sources, sou
 
 
 def report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources):
-    total_found_sources = 0
-    total_seqs_count = 0
+    total_true_directions = 0
+    total_all_directions = 0
     for o in VERIFIED_OUTBREAKS:
         outbreak_graph = SourceFinder(simulation_analyzer.get_outbreak_graph(o))
-        found_sources, seqs_count = outbreak_graph.get_source_true_positive(outbreak_verified_sources[o])
-        total_found_sources += found_sources
-        total_seqs_count += seqs_count
+        true_directions, all_directions = outbreak_graph.get_true_directions(outbreak_verified_sources[o])
+        total_true_directions += true_directions
+        total_all_directions += all_directions
     print("#######")
-    print("Found true directions: {0} of {1}".format(total_found_sources, total_seqs_count))
-    print("True rate: {0}".format(float(total_found_sources) / total_seqs_count))
+    print("Found true directions: {0} of {1}".format(total_true_directions, total_all_directions))
+    print("True rate: {0}".format(float(total_true_directions) / total_all_directions))
     print("#######")
 
 
@@ -436,13 +442,13 @@ def main():
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-#    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
+    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
 #    print('Simulations')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
-    report_relatedness(simulation_analyzer, min_dist_analyzer)
+#    report_relatedness(simulation_analyzer, min_dist_analyzer)
 
 #    print('Min dist')
-    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')
+#    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')
 
 
 if __name__ == '__main__':
