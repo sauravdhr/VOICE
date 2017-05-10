@@ -87,8 +87,8 @@ class TasksManager(object):
         for t in self.tasks:
             t.normalize_samples(k_min)
 
-    def run_simulations(self, simulations_count, L, cores_count=None):
+    def run_simulations(self, simulations_count, L, k_max, cores_count=None):
         run_simulation_tasks_manager = run_tasks_pool.SimulationManager(self.tasks,
-                                                                        simulations_count, L,
+                                                                        simulations_count, L, k_max,
                                                                         cores_count if cores_count else CORES_COUNT)
         run_simulation_tasks_manager.run()

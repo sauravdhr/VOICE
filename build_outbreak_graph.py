@@ -18,15 +18,19 @@ class SimulationResultsParser(object):
         self.nodes = pair_name.split('_vs_')
         self.edges = self.parse_edges(dir, pair_name)
 
+    #TODO:
     def parse_edges(self, dir, pair_name):
         distances = {self.nodes[0]: [], self.nodes[1]: []}
         with open(os.path.join(dir, pair_name, 'results.log')) as f:
             f.readline()
             for l in f.readlines():
                 c = l.split()
-                distances[c[0]].append(int(c[2]))
-        return [(self.nodes[0], self.nodes[1], statistics.median(distances[self.nodes[1]])),
-                (self.nodes[1], self.nodes[0], statistics.median(distances[self.nodes[0]]))]
+#                distances[c[0]].append(int(c[2]))
+                distances[c[0]].append(int(c[1]))
+#        return [(self.nodes[0], self.nodes[1], statistics.median(distances[self.nodes[1]])),
+#                (self.nodes[1], self.nodes[0], statistics.median(distances[self.nodes[0]]))]
+        return [(self.nodes[1], self.nodes[0], statistics.median(distances[self.nodes[1]])),
+                (self.nodes[0], self.nodes[1], statistics.median(distances[self.nodes[0]]))]
 
 
 def build_graph(outbreak_dir_name):

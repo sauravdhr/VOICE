@@ -23,10 +23,12 @@ SIMULATION_EDGE_LIST_FULL = 'data/all_clipped_full_graph_simulation.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
 SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
-VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
-#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BJ', 'AQ']
-#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
-GRAPH = SIMULATION_EDGE_LIST
+AW = 'results/AW.txt'
+AQ = 'results/AQ.txt'
+#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
+VERIFIED_OUTBREAKS = ['AW']
+#GRAPH = SIMULATION_EDGE_LIST
+GRAPH = AW
 
 
 class SourceFinder(object):
@@ -71,6 +73,7 @@ class SourceFinder(object):
         shortes_paths_tree = self.get_shortest_path_tree(vertex)
         for e in shortes_paths_tree.edges():
             shortes_paths_tree_cost += shortes_paths_tree[e[0]][e[1]]['weight']
+        print("Vertex: {0}, spt: {1}".format(vertex, shortes_paths_tree_cost))
         return shortes_paths_tree_cost
 
     def find_source(self, f):
@@ -445,6 +448,7 @@ def main():
     report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
 #    print('Simulations')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
+    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
 #    report_relatedness(simulation_analyzer, min_dist_analyzer)
 
 #    print('Min dist')

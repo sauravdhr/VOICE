@@ -73,10 +73,11 @@ class OutbreakTask(MultiTasks):
 
 
 class ProcessPool(object):
-    def __init__(self, cores_to_use, simulations_count, L):
+    def __init__(self, cores_to_use, simulations_count, L, k_max):
         self.cores_to_use = cores_to_use
         self.simulations_count = simulations_count
         self.L = L
+        self.k_max = k_max
         self.subprocesses = [None] * cores_to_use
 
     def add_new_task(self, task, out_dir):
@@ -84,9 +85,10 @@ class ProcessPool(object):
             if not self.subprocesses[i]:
                 print('Launching simulation for pair: ' + task[0] + ' ' + task[1])
                 cmd = [sys.executable, NAME_OF_SIMULATION_SCRIPT, task[0], task[1],
-                       '-o', out_dir, '-n', self.simulations_count]
+                       '-o', out_dir, '-n', str(self.simulations_count), '-k_max', str(self.k_max)]
                 if self.L:
-                    cmd.extend(['-L', self.L])
+                    cmd.extend(['-L', str(self.L)])
+                print(cmd)
                 self.subprocesses[i] = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 return True
         return False
@@ -106,21 +108,24 @@ class ProcessPool(object):
 class SimulationManager(object):
     CORES_RESERVE = 4
 
-    def __init__(self, tasks_list, simulations_count, L, desired_number_of_processes=0):
+    def __init__(self, tasks_list, simulations_count, L, k_max, cores_number=0):
         self.simulations_count = simulations_count
         self.L = L
-        self.number_of_processes = self.calculate_number_of_processes(desired_number_of_processes)
+        self.k_max = k_max
+        self.cores_number = self.get_number_of_available_cores(cores_number)
         self.outbreaks_tasks = self.determine_outbreaks_tasks(tasks_list)
 
+    #TODO:
     @staticmethod
     def determine_outbreaks_tasks(tasks_list):
         outbreak_tasks = list()
         for t in tasks_list:
-            outbreak_tasks.append(OutbreakTask(t.normalized_in_dir, t.out_dir))
+#            outbreak_tasks.append(OutbreakTask(t.normalized_in_dir, t.out_dir))
+            outbreak_tasks.append(OutbreakTask(t.in_dir, t.out_dir))
         return outbreak_tasks
 
     @staticmethod
-    def calculate_number_of_processes(desired_number_of_processes):
+    def get_number_of_available_cores(desired_number_of_processes):
         available_number_of_cores = multiprocessing.cpu_count()
         number_of_processes = desired_number_of_processes
         if number_of_processes == 0:
@@ -132,7 +137,7 @@ class SimulationManager(object):
         return number_of_processes
 
     def run_simulations(self):
-        pool = ProcessPool(self.number_of_processes, self.simulations_count, self.L)
+        pool = ProcessPool(self.cores_number, self.simulations_count, self.L, self.k_max)
         i = 0
         tasks_list = list()
         for t in self.outbreaks_tasks:
