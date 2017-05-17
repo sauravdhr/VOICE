@@ -16,7 +16,7 @@ import montecarlo_network
 OUT_DIR = "results"
 DEFAULT_SIMULATIONS_NUMBER = 51
 L = 100
-K_MAX_DEFAULT = 10
+K_MAX_DEFAULT = 0
 
 
 def determine_network_sources(sequences1, sequences2):
@@ -152,4 +152,5 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
+    print(args.k_max)
     main([args.fasta1, args.fasta2], args.out_dir, args.simulations_count, args.L, args.k_max)

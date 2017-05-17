@@ -10,9 +10,10 @@ import network_creator
 import random
 import copy
 import statistics
+import os
 
 
-MUTATION_PROBABILITY = 0.03
+MUTATION_PROBABILITY = 0.01
 VICINITY = 1
 
 
@@ -22,12 +23,18 @@ class MonteCarloNetwork(object):
 
     def __init__(self, seqs):
         self.seqs = seqs
-        self.distance_matrix = network_creator.infer_distance_matrix(self.seqs[0] + self.seqs[1])
+        self.distance_matrix = network_creator.infer_distance_matrix(sum(self.seqs, []))
 
     def get_seqs_subset_inds(self, k):
-        seqs_inds = [list(range(len(self.seqs[0]))), list(range(len(self.seqs[0]), len(self.seqs[0])+len(self.seqs[1])))]
-        seqs_subset_inds = [[], []]
-        for i in range(2):
+        prev_ind = 0
+        seqs_inds = []
+        for i in range(len(self.seqs)):
+            new_ind = prev_ind + len(self.seqs[i])
+            seqs_inds.append(list(range(prev_ind, new_ind)))
+            prev_ind = new_ind
+
+        seqs_subset_inds = [[] for _ in range(len(self.seqs))]
+        for i in range(len(self.seqs)):
             random.shuffle(seqs_inds[i])
             if len(seqs_inds[i]) >= k:
                 seqs_subset_inds[i] = set(seqs_inds[i][:k])
@@ -36,12 +43,15 @@ class MonteCarloNetwork(object):
         return seqs_subset_inds
 
     def run_simulation(self, runs, k):
-        spreading_time = [[0] * runs for _ in range(2)]
+        spreading_time = [[0] * runs for _ in range(len(self.seqs))]
         for i in range(runs):
+            print("run#: {0}".format(i+1))
             seqs_subset_inds = self.get_seqs_subset_inds(k)
-            spreading_time[0][i] = self.single_run(seqs_subset_inds[0], seqs_subset_inds[1])
-            spreading_time[1][i] = self.single_run(seqs_subset_inds[1], seqs_subset_inds[0])
-        return statistics.median(spreading_time[0]), statistics.median(spreading_time[1])
+            for j in range(len(self.seqs)):
+                recipient = sum([seqs_subset_inds[:j], seqs_subset_inds[j+1:]], [])
+                spreading_time[j][i] = self.single_run(seqs_subset_inds[j],
+                                                       set.union(*recipient))
+        return list(map(lambda x: statistics.median(x), spreading_time))
 
     @staticmethod
     def is_mutate():
@@ -82,10 +92,13 @@ class MonteCarloNetwork(object):
         return filtered_sources
 
 
-
 if __name__ == '__main__':
+    outbreak_path = 'data/AW_clipped'
+    fasta_files = [os.path.join(outbreak_path, f) for f in os.listdir(outbreak_path)
+                   if os.path.isfile(os.path.join(outbreak_path, f))]
     sequences_sets = [network_creator.parse_fasta(fasta_name) for fasta_name in
-                      ['data/AW_clipped/AW2_unique_1b_49.fas', 'data/AW_clipped/AW4_unique_1b_47.fas']]
+                      fasta_files]
     network = MonteCarloNetwork(sequences_sets)
-    timer = network.run_simulation(51, 10)
-    print(timer)
+    timer = network.run_simulation(21, 4)
+    samples = map(lambda x: x.split('/')[-1].split('_')[0], fasta_files)
+    print(list(zip(samples, timer)))

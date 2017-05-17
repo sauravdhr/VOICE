@@ -10,7 +10,7 @@ import simulation_tasks_manager
 
 
 OUT_DIR = './results'
-SIMULATIONS_NUMBER = 51
+SIMULATIONS_NUMBER = 5
 K_MAX = 10
 L = 60
 
@@ -22,8 +22,8 @@ def parse_arguments():
     parser.add_argument("-o", dest='out_dir', type=str, default=OUT_DIR,
                         help="Path to an output directory where results will be generated. "
                              "Default out directory is \'" + OUT_DIR + "\' ")
-    parser.add_argument("-k", dest='k_max', type=int, default=K_MAX,
-                        help="Maximum number of sequences in fasta files after normalization.")
+#    parser.add_argument("-k", dest='k_max', type=int, default=K_MAX,
+#                        help="Maximum number of sequences in fasta files after normalization.")
     parser.add_argument("-n", dest='simulations_count', default=SIMULATIONS_NUMBER,
                         help="Number of simulations.")
     parser.add_argument("-L", dest='L', type=int, default=L,
@@ -39,7 +39,7 @@ def main():
     tasks = simulation_tasks_manager.TasksManager(args.tasks_file, args.out_dir)
     tasks.init_tasks()
 #    tasks.normalize_populations(args.k_max)
-    tasks.run_simulations(args.simulations_count, args.L, args.k_max, args.cores_count)
+    tasks.run_simulations(args.simulations_count, args.L, args.cores_count)
 
 if __name__ == '__main__':
     main()

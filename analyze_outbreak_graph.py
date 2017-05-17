@@ -10,25 +10,33 @@ import statistics
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+import utils.roc2img
+import sklearn.metrics
+import csv
 
-
+COLORS = ['red', 'green', 'blue']
 SOURCES_FILE_NAME = 'data/sources.txt'
 CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
 ANTI_CENTRALITY_GRAPH = 'data/anti_centrality_graph.txt'
 #MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
 #MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist_vicinity3.txt'
-MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist_v_4_log_3.txt'
-#MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
+MIN_DIST_PLUS_BORDER_EDGE_LIST = 'data/all_clipped_min_dist_v_4_log_3.txt'
+MIN_DIST_EDGE_LIST = 'data/all_clipped_min_dist.txt'
 SIMULATION_EDGE_LIST_FULL = 'data/all_clipped_full_graph_simulation.txt'
+MONTECARLO_10 = 'results/montecarlo_10.txt'
+MONTECARLO_4 = 'results/montecarlo_4.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
 SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
 AW = 'results/AW.txt'
 AQ = 'results/AQ.txt'
 #VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
+#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
 VERIFIED_OUTBREAKS = ['AW']
-#GRAPH = SIMULATION_EDGE_LIST
-GRAPH = AW
+#VERIFIED_OUTBREAKS = ['AQ']
+#GRAPH = MONTECARLO_10
+GRAPH = SIMULATION_EDGE_LIST
+#GRAPH = AW
 
 
 class SourceFinder(object):
@@ -54,6 +62,13 @@ class SourceFinder(object):
         for e in self.outbreak_graph.edges(vertex):
             weights.append(self.outbreak_graph[e[0]][e[1]]['weight'])
         return statistics.median(weights)
+
+    def get_number_of_recipients(self, vertex):
+        number_of_recipients = 0
+        for e in self.outbreak_graph.edges(vertex):
+            if self.outbreak_graph[e[0]][e[1]]['weight'] < self.outbreak_graph[e[1]][e[0]]['weight']:
+                number_of_recipients += 1
+        return number_of_recipients
 
     def get_shortest_path_tree(self, vertex):
         edges_dict = dict()
@@ -95,6 +110,9 @@ class SourceFinder(object):
 
     def find_source_by_shortest_path_tree(self):
         return self.find_source(self.get_weight_of_shortest_path_tree)
+
+    def find_source_by_number_of_recipients(self):
+        return self.find_source(self.get_number_of_recipients)
 
     def find_source_by_centrality(self):
 #        self.centrality = nx.eigenvector_centrality_numpy(self.outbreak_graph)
@@ -228,6 +246,20 @@ class GraphAnalyzer(object):
                     threshold = new_threshold
         return threshold
 
+    def get_zero_type_II_error_threshold_for_pairs(self):
+        threshold = 0
+        for e in self.related_edges:
+            w = min(self.graph[e[0]][e[1]]['weight'], self.graph[e[1]][e[0]]['weight'])
+            if w > threshold:
+                threshold = w
+        return threshold
+
+    def get_false_positive_rate_pairs(self, thr):
+        return len(self.get_false_related_edges(thr))/len(self.unrelated_edges)
+
+    def get_true_positive_rate_pairs(self, thr):
+        return len(self.get_true_related_edges(thr))/len(self.related_edges)
+
     def get_number_of_clusters(self, threshold):
         clusters_count = 0
         for k in self.outbreaks_nodes_dict.keys():
@@ -242,8 +274,14 @@ class GraphAnalyzer(object):
         graph.add_weighted_edges_from(outbreak_edges)
         return nx.number_connected_components(graph)
 
-    def get_true_related_number(self, threshold):
-        return sum(map(lambda x: x[2] >= threshold, self.unrelated_edges)), len(self.unrelated_edges)
+#    def get_true_related_number(self, threshold):
+#        return sum(map(lambda x: x[2] >= threshold, self.unrelated_edges)), len(self.unrelated_edges)
+
+    def get_false_related_edges(self, threshold):
+        return list(filter(lambda x: x[2] <= threshold, self.unrelated_edges))
+
+    def get_true_related_edges(self, threshold):
+        return list(filter(lambda x: x[2] <= threshold, self.related_edges))
 
     def get_related_error(self, threshold):
         return sum(map(lambda x: x[2] > threshold, self.related_edges)), len(self.related_edges)
@@ -303,6 +341,48 @@ def get_outbreak_verified_sources(file_name):
     return dict(zip([x[:2] for x in sources], sources))
 
 
+def depict_ROC_curve(rocs, colors, labels, fname, randomline):
+    plt.figure(figsize=(4, 4), dpi=80)
+    utils.roc2img.SetupROCCurvePlot(plt)
+    for i in range(len(rocs)):
+        plt.plot(rocs[i][0], rocs[i][1], color=colors[i], linewidth=2, label=labels[i])
+    utils.roc2img.SaveROCCurvePlot(plt, fname, randomline)
+
+
+def get_rocs(analyzers):
+    roc = [[] for _ in range(len(analyzers))]
+    for i in range(len(analyzers)):
+        x = [0.0]
+        y = [0.0]
+        thr = 0
+        tpr = 0
+        while tpr != 1:
+            tpr = analyzers[i].get_true_positive_rate_pairs(thr)
+            fpr = analyzers[i].get_false_positive_rate_pairs(thr)
+            x.append(fpr)
+            y.append(tpr)
+            thr += 1
+        x.append(1.0)
+        y.append(1.0)
+        roc[i] = (x, y)
+    return roc
+
+
+def get_aucs(rocs):
+    aucs = []
+    for roc in rocs:
+        aucs.append(sklearn.metrics.auc(roc[0], roc[1]))
+    return aucs
+
+
+def draw_ROC(analyzers, colors, labels, fname, randomline):
+    rocs = get_rocs(analyzers)
+    aucs = get_aucs(rocs)
+    for i in range(len(labels)):
+        labels[i] += ' (auc = %0.3f)' % aucs[i]
+    depict_ROC_curve(rocs, colors, labels, fname, randomline)
+
+
 def main0():
 #    args = parse_arguments()
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
@@ -356,6 +436,8 @@ def report_source_finding_quality(graph_analyzer, outbreak_verified_sources, sou
             outbreak_source = outbreak_graph.find_source_by_centrality()
         elif source_finding_method == 'star':
             outbreak_source = outbreak_graph.find_source_by_star_median()
+        elif source_finding_method == 'recipients':
+            outbreak_source = outbreak_graph.find_source_by_number_of_recipients()
         print("Source: found - {0}, real - {1}".format(outbreak_source.split('_')[0], outbreak_verified_sources[o]))
         if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
             found_sources_count += 1
@@ -440,16 +522,41 @@ def report_relatedness(simulation_analyzer, min_dist_analyzer):
     print("Number of unrelated samples: {0}".format(len(simulation_analyzer.outbreaks_nodes_dict['XX'])))
 
 
+def export_classifiers(analyzers, file_names):
+    for i in range(len(analyzers)):
+        with open(file_names[i], 'w') as csv_f:
+            w = csv.writer(csv_f)
+            w.writerow(['l', 'related'])
+            for e in analyzers[i].related_edges:
+                w.writerow([e[2], 1])
+            for e in analyzers[i].unrelated_edges:
+                w.writerow([e[2], 0])
+
+
 def main():
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
+    min_dist_plus_border_analyzer = UndirectedGraphAnalyzer(MIN_DIST_PLUS_BORDER_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
+#    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
 #    print('Simulations')
+#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'recipients')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
-    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
+#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
+#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star')
 #    report_relatedness(simulation_analyzer, min_dist_analyzer)
+
+#    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
+#             ['red', 'green', 'blue'], ['min dist', 'min dist + border', 'simulation'], 'roc.png', True)
+
+    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
+                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
+
+#    thrII = min_dist_analyzer.get_zero_type_II_error_threshold_for_pairs()
+#    print(thrII)
+#    print(min_dist_analyzer.get_false_positive_rate_pairs(10))
+#    print(min_dist_analyzer.get_true_positive_rate_pairs(10))
 
 #    print('Min dist')
 #    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')

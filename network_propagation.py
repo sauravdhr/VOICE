@@ -12,7 +12,7 @@ import graph_utils
 
 FILE_NAME = "out/graphs/AD002_unique_1a_72.json"
 LOG_FILE_NAME = "out/graphs/AD002_unique_1a_72.out"
-LOGGING_PERIOD = 100
+#LOGGING_PERIOD = 100
 
 
 class Propagator(object):
@@ -24,7 +24,7 @@ class Propagator(object):
         self.network = network
         self.log_file = open(log_file_name, 'w')
         self.files.append(self.log_file)
-        self.last_original_node = self.find_last_original_node()
+        self.observed_seqs_count = self.get_observed_seqs_count()
         self.counter = 0
         self.population = [0] * self.network.number_of_nodes()
         self.influential_nodes = dict()
@@ -37,16 +37,20 @@ class Propagator(object):
         for file in self.files:
             os.unlink(file)
 
-    def find_last_original_node(self):
-        last_original_node = 0
+    def get_observed_seqs_count(self):
+        observed_seqs_count = 0
         for i in self.network.nodes_iter():
             if self.network.node[i]['type'] != 'original':
-                return last_original_node
-            last_original_node += 1
-        return last_original_node
+                return observed_seqs_count
+            observed_seqs_count += 1
+        return observed_seqs_count
+
+    def log_propagation(self, node, counter):
+        self.log_file.write("{0}, {1}\n".format(node, counter))
 
     def propagate(self, begin_nodes):
         for begin_node in begin_nodes:
+            self.log_propagation(begin_node, self.counter)
             self.population[begin_node] = 1
             self.influential_nodes[begin_node] = None
         while True:
@@ -64,7 +68,7 @@ class Propagator(object):
 
             new_influential_nodes = []
             for n in visited_nodes:
-                max_population = self.MAX_HIDDEN_POPULATION if n > self.last_original_node \
+                max_population = self.MAX_HIDDEN_POPULATION if n > self.observed_seqs_count \
                     else self.MAX_ORIGINAL_POPULATION
                 if self.population[n] == 0:
                     new_influential_nodes.append(n)
@@ -72,14 +76,16 @@ class Propagator(object):
                     self.population[n] += 1
 
             for n in new_influential_nodes:
+                if n < self.observed_seqs_count:
+                    self.log_propagation(n, self.counter)
                 self.influential_nodes[n] = None
             self.update_influential_nodes()
 
             if self.are_all_original_nodes_visited():
-                self.log_file.write(self.get_population_status_string())
+#                self.log_file.write(self.get_population_status_string())
                 break
         # Prevent infinite simulations
-        if self.counter > 10000000:
+        if self.counter > 100000:
             print("Exceeded the maximum number of tacts. Stopping the simulation.")
         return self.counter
 
@@ -98,13 +104,13 @@ class Propagator(object):
         return True
 
     def are_all_original_nodes_visited(self):
-        if not self.counter % LOGGING_PERIOD:
-#            print(len(list(filter(lambda i: i != 0, self.population[:self.last_original_node]))))
-            self.log_file.write(self.get_population_status_string())
-        return min(self.population[:self.last_original_node])
+#        if not self.counter % LOGGING_PERIOD:
+#            print(len(list(filter(lambda i: i != 0, self.population[:self.observed_seqs_count]))))
+#            self.log_file.write(self.get_population_status_string())
+        return min(self.population[:self.observed_seqs_count])
 
     def get_population_status_string(self):
-        return ' '.join(str(e) for e in self.population[:self.last_original_node]) + '\n'
+        return ' '.join(str(e) for e in self.population[:self.observed_seqs_count]) + '\n'
 
 
 def main():
