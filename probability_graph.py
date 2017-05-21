@@ -10,7 +10,7 @@ import networkx as nx
 import graph_utils
 
 
-MUTATION_PROBABILITY = 0.01
+MUTATION_PROBABILITY = 0.03
 
 
 class ProbabilityGraph(graph_utils.Graph):

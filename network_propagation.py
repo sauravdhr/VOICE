@@ -85,7 +85,7 @@ class Propagator(object):
 #                self.log_file.write(self.get_population_status_string())
                 break
         # Prevent infinite simulations
-        if self.counter > 100000:
+        if self.counter > 3000:
             print("Exceeded the maximum number of tacts. Stopping the simulation.")
         return self.counter
 

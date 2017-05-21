@@ -11,7 +11,6 @@ import simulation_tasks_manager
 
 OUT_DIR = './results'
 SIMULATIONS_NUMBER = 5
-K_MAX = 10
 L = 60
 
 

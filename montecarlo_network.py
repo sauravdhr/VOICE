@@ -13,8 +13,8 @@ import statistics
 import os
 
 
-MUTATION_PROBABILITY = 0.01
-VICINITY = 1
+MUTATION_PROBABILITY = 0.03
+VICINITY = 0
 
 
 class MonteCarloNetwork(object):

@@ -12,7 +12,7 @@ import hamming_dist_graph
 
 
 class SimulationDistGraph(object):
-    BASE_BORDER_VICINITY = 1
+    BASE_BORDER_VICINITY = 0
 
     def __init__(self, seqs1, seqs2):
         self.seqs = [seqs1[:], seqs2[:]]

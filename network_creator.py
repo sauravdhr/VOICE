@@ -23,7 +23,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 
 from hamming_dist_graph import hamming_distance
 
-MUTATION_PROBABILITY = 0.01
+MUTATION_PROBABILITY = 0.03
 OUT_DIR = "out/graphs"
 
 

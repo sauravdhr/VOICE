@@ -14,7 +14,7 @@ import argparse
 import montecarlo_network
 
 OUT_DIR = "results"
-DEFAULT_SIMULATIONS_NUMBER = 51
+DEFAULT_SIMULATIONS_NUMBER = 5
 L = 100
 K_MAX_DEFAULT = 0
 

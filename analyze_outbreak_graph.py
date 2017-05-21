@@ -32,11 +32,11 @@ AW = 'results/AW.txt'
 AQ = 'results/AQ.txt'
 #VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
 #VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
-VERIFIED_OUTBREAKS = ['AW']
-#VERIFIED_OUTBREAKS = ['AQ']
+#VERIFIED_OUTBREAKS = ['AW']
+VERIFIED_OUTBREAKS = ['AQ']
 #GRAPH = MONTECARLO_10
 GRAPH = SIMULATION_EDGE_LIST
-#GRAPH = AW
+#GRAPH = AQ
 
 
 class SourceFinder(object):
@@ -251,6 +251,20 @@ class GraphAnalyzer(object):
         for e in self.related_edges:
             w = min(self.graph[e[0]][e[1]]['weight'], self.graph[e[1]][e[0]]['weight'])
             if w > threshold:
+                threshold = w
+        return threshold
+
+    def get_min_edge_weight(self, e1, e2):
+        return min(self.graph[e1][e2]['weight'], self.graph[e2][e1]['weight'])
+
+    def get_triangle_threshold(self):
+        threshold = 10000000
+        for e in self.unrelated_edges:
+            for n in self.graph.nodes():
+                w = max(self.get_min_edge_weight(e[0], e[1]),
+                        self.get_min_edge_weight(e[0], n),
+                        self.get_min_edge_weight(n, e[1]))
+            if w < threshold:
                 threshold = w
         return threshold
 
@@ -539,7 +553,7 @@ def main():
     min_dist_plus_border_analyzer = UndirectedGraphAnalyzer(MIN_DIST_PLUS_BORDER_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-#    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
+    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
 #    print('Simulations')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'recipients')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
@@ -550,8 +564,8 @@ def main():
 #    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #             ['red', 'green', 'blue'], ['min dist', 'min dist + border', 'simulation'], 'roc.png', True)
 
-    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
-                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
+#    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
+#                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
 
 #    thrII = min_dist_analyzer.get_zero_type_II_error_threshold_for_pairs()
 #    print(thrII)
