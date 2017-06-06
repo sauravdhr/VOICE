@@ -12,11 +12,12 @@ import json
 import math
 import os
 import sys
+import argparse
 from enum import Enum
 
 import networkx as nx
 from Bio import SeqIO
-from graphviz import Digraph
+#from graphviz import Digraph
 from networkx.readwrite import json_graph
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
@@ -24,7 +25,6 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from hamming_dist_graph import hamming_distance
 
 MUTATION_PROBABILITY = 0.03
-OUT_DIR = "out/graphs"
 
 
 def represents_int(s):
@@ -339,7 +339,7 @@ class GraphExporter(object):
                 'type': GraphExporter.get_vertex_type(vertex['type']),
                 'color': GraphExporter.get_vertex_color(vertex['type'])}
 
-
+'''
 class DotExporter(GraphExporter):
     @staticmethod
     def export(graph, file_name):
@@ -352,6 +352,7 @@ class DotExporter(GraphExporter):
                 dot.edge(str(v1), str(v2), weight=str(properties['weight']))
         with open(file_name, 'w') as f:
             f.write(dot.source)
+'''
 
 
 class JsonExporter(GraphExporter):
@@ -369,27 +370,36 @@ class JsonExporter(GraphExporter):
             json.dump(data, f)
 
 
-def main(fasta_name, search_for_medians):
-    sequences_set = parse_fasta(fasta_name)
+def parse_arguments():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-i', dest='input_fasta', type=str, required=True)
+    argparser.add_argument('-o', dest='out_dir', type=str, required=True)
+    return argparser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+    sequences_set = parse_fasta(args.input_fasta)
 
     L = get_count_of_heterogeneous_positions(sequences_set)
     print(L)
 
     graph = ProbabilityGraphBuilder(DistanceGraphBuilder(
-        sequences_set, search_for_medians).get_graph(), L)
+        sequences_set, False).get_minimal_connected_graph(), L)
 
-    fasta_basename = os.path.splitext(os.path.basename(fasta_name))[0]
+    fasta_basename = os.path.splitext(os.path.basename(args.input_fasta))[0]
 
-    f = os.path.join(OUT_DIR, fasta_basename)
-    out_file_json = f + '.json'
+    f = os.path.join(args.out_dir, fasta_basename)
+    out_file_json = f + '_distance.json'
+    JsonExporter.export(graph.distance_graph, out_file_json)
+    out_file_json = f + '_probability.json'
     JsonExporter.export(graph.probability_graph, out_file_json)
-    out_file_dot = f + '_distance.dot'
-    DotExporter.export(graph.distance_graph, out_file_dot)
-    out_file_dot = f + '_probability.dot'
-    DotExporter.export(graph.probability_graph, out_file_dot)
+
+#    out_file_dot = f + '_distance.dot'
+#    DotExporter.export(graph.distance_graph, out_file_dot)
+#    out_file_dot = f + '_probability.dot'
+#    DotExporter.export(graph.probability_graph, out_file_dot)
 
 
 if __name__ == "__main__":
-    fasta_name = sys.argv[1]
-    search_for_medians = False if len(sys.argv) <= 2 else True
-    main(fasta_name, search_for_medians)
+    main()
