@@ -12,7 +12,6 @@ import time
 import sys
 
 NAME_OF_SIMULATION_SCRIPT = 'run_pair_simulation.py'
-#NAME_OF_SIMULATION_SCRIPT = 'pair_simulation.py'
 LAUNCH_PERIOD = 1
 
 
@@ -79,7 +78,7 @@ class ProcessPool(object):
         self.L = L
         self.subprocesses = [None] * cores_to_use
 
-    def add_new_task(self, task, out_dir):
+    def launch_new_task(self, task, out_dir):
         for i in range(len(self.subprocesses)):
             if not self.subprocesses[i]:
                 print('Launching simulation for pair: ' + task[0] + ' ' + task[1])
@@ -141,7 +140,7 @@ class SimulationManager(object):
         for t in self.outbreaks_tasks:
             tasks_list.extend(t.list_tasks())
         while i != len(tasks_list):
-            if pool.add_new_task(tasks_list[i][0], tasks_list[i][1]):
+            if pool.launch_new_task(tasks_list[i][0], tasks_list[i][1]):
                 print('Launched {0} tasks of {1}'.format(i, len(tasks_list)))
                 i += 1
                 continue

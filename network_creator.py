@@ -227,6 +227,7 @@ class DistanceGraphBuilder(object):
     def infer_medians(sequences):
         return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
 
+    #TODO:
     @staticmethod
     def construct_minimal_connected_graph_matrix(distance_matrix):
         mst = minimum_spanning_tree(csr_matrix(distance_matrix))
