@@ -396,6 +396,13 @@ class JsonExporter(GraphExporter):
             json.dump(data, f)
 
 
+class GexfExporter(GraphExporter):
+    @staticmethod
+    def export(graph, file_name):
+        g = GraphExporter.get_nx_graph(graph)
+        nx.write_gexf(g, file_name)
+
+
 def parse_arguments():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-i', dest='input_fasta', type=str, required=True)
@@ -416,10 +423,10 @@ def main():
     fasta_basename = os.path.splitext(os.path.basename(args.input_fasta))[0]
 
     f = os.path.join(args.out_dir, fasta_basename)
-    out_file_json = f + '_distance.json'
-    JsonExporter.export(graph.distance_graph, out_file_json)
-    out_file_json = f + '_probability.json'
-    JsonExporter.export(graph.probability_graph, out_file_json)
+    out_file_json = f + '_distance.gexf'
+    GexfExporter.export(graph.distance_graph, out_file_json)
+    out_file_json = f + '_probability.gexf'
+    GexfExporter.export(graph.probability_graph, out_file_json)
 
 #    out_file_dot = f + '_distance.dot'
 #    DotExporter.export(graph.distance_graph, out_file_dot)
