@@ -21,6 +21,7 @@ from Bio import SeqIO
 from networkx.readwrite import json_graph
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import shortest_path
 
 from hamming_dist_graph import hamming_distance
 
@@ -227,7 +228,7 @@ class DistanceGraphBuilder(object):
     def infer_medians(sequences):
         return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
 
-    #TODO:
+    '''
     @staticmethod
     def construct_minimal_connected_graph_matrix(distance_matrix):
         mst = minimum_spanning_tree(csr_matrix(distance_matrix))
@@ -237,6 +238,26 @@ class DistanceGraphBuilder(object):
             for j, length in enumerate(row):
                 if length and length > min_length:
                     minimal_connected_graph_matrix[i, j] = None
+        return minimal_connected_graph_matrix
+    '''
+
+    @staticmethod
+    def construct_minimal_connected_graph_matrix(distance_matrix):
+        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
+        _, predecessors = shortest_path(mst, directed=False, return_predecessors=True)
+        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
+
+        for i, row in enumerate(minimal_connected_graph_matrix):
+            for j, weight in enumerate(row):
+                if weight:
+                    path = [i]
+                    while path[-1] != j:
+                        path.append(predecessors[j, path[-1]])
+                    path_edges = [(path[v], path[v + 1]) for v in range(len(path) - 1)]
+                    path_weights = [distance_matrix[u, v] for u, v in path_edges]
+                    max_weight = max(path_weights)
+                    if weight >= max_weight:
+                        minimal_connected_graph_matrix[i, j] = None
         return minimal_connected_graph_matrix
 
     def get_minimal_connected_graph(self):
@@ -339,6 +360,17 @@ class GraphExporter(object):
                 'type': GraphExporter.get_vertex_type(vertex['type']),
                 'color': GraphExporter.get_vertex_color(vertex['type'])}
 
+    @staticmethod
+    def get_nx_graph(graph):
+        g = nx.DiGraph()
+        for v in range(len(graph.vertices)):
+            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
+            g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
+        for v1 in range(len(graph.edges)):
+            for (v2, properties) in graph.edges[v1]:
+                g.add_edge(v1, v2, weight=properties['weight'])
+        return g
+
 '''
 class DotExporter(GraphExporter):
     @staticmethod
@@ -358,13 +390,7 @@ class DotExporter(GraphExporter):
 class JsonExporter(GraphExporter):
     @staticmethod
     def export(graph, file_name):
-        g = nx.DiGraph()
-        for v in range(len(graph.vertices)):
-            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
-            g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
-        for v1 in range(len(graph.edges)):
-            for (v2, properties) in graph.edges[v1]:
-                g.add_edge(v1, v2, weight=properties['weight'])
+        g = GraphExporter.get_nx_graph(graph)
         data = json_graph.adjacency_data(g)
         with open(file_name, 'w') as f:
             json.dump(data, f)
