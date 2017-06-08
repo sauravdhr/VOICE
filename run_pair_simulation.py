@@ -79,15 +79,21 @@ def run_simple_simulation(fastas, out_dir, simulations_count, L):
     graphs = [network_creator.ProbabilityGraphBuilder(network_creator.DistanceGraphBuilder(
         sequences, False).get_minimal_connected_graph(), L) for sequences in graphs_sequences]
 
-    out_file_dots = [None] * len(graphs)
-    out_file_jsons = [None] * len(graphs)
+    dist_out_file = [None] * len(graphs)
+    prob_json_out_file = [None] * len(graphs)
+    prob_gexf_out_file = [None] * len(graphs)
 
     for i, graph in enumerate(graphs):
         f = os.path.join(out_dir, fastas_basenames[i])
-        out_file_jsons[i] = f + '.json'
-        out_file_dots[i] = f + '.dot'
-        network_creator.DotExporter.export(graph.distance_graph, out_file_dots[i])
-        network_creator.JsonExporter.export(graph.probability_graph, out_file_jsons[i])
+        prob_json_out_file[i] = f + '_prob.json'
+        prob_gexf_out_file[i] = f + '_prob.gexf'
+        dist_out_file[i] = f + '_dist.gexf'
+        network_creator.GexfExporter.export(graph.distance_graph, network_creator.GraphType.UNDIRECTED,
+                                            dist_out_file[i])
+        network_creator.JsonExporter.export(graph.probability_graph, network_creator.GraphType.DIRECTED,
+                                            prob_json_out_file[i])
+        network_creator.GexfExporter.export(graph.probability_graph, network_creator.GraphType.DIRECTED,
+                                            prob_gexf_out_file[i])
 
     simulations_out_dir = out_dir + '/simulation'
     if not os.path.exists(simulations_out_dir):
@@ -98,7 +104,7 @@ def run_simple_simulation(fastas, out_dir, simulations_count, L):
     with open(results_log, 'w') as log:
         log.write('host simulation_number cycles simulation_results_file\n')
         for i, j in [[0, 1], [1, 0]]:
-            network = graph_utils.import_graph_from_json(out_file_jsons[i])
+            network = graph_utils.import_graph_from_json(prob_json_out_file[i])
             f = os.path.join(simulations_out_dir, fastas_basenames[i])
             for k in range(simulations_count):
                 log_file = f + '_' + str(k) + '.out'

@@ -25,7 +25,7 @@ from scipy.sparse.csgraph import shortest_path
 
 from hamming_dist_graph import hamming_distance
 
-MUTATION_PROBABILITY = 0.03
+MUTATION_PROBABILITY = 0.01
 
 
 def represents_int(s):
@@ -256,7 +256,7 @@ class DistanceGraphBuilder(object):
                     path_edges = [(path[v], path[v + 1]) for v in range(len(path) - 1)]
                     path_weights = [distance_matrix[u, v] for u, v in path_edges]
                     max_weight = max(path_weights)
-                    if weight >= max_weight:
+                    if weight > max_weight:
                         minimal_connected_graph_matrix[i, j] = None
         return minimal_connected_graph_matrix
 
@@ -329,9 +329,14 @@ class ProbabilityGraphBuilder(object):
         return probability_graph
 
 
+class GraphType(object):
+    DIRECTED = 0
+    UNDIRECTED = 1
+
+
 class GraphExporter(object):
     @staticmethod
-    def export(graph, file_name):
+    def export(graph, graph_type, file_name):
         pass
 
     @staticmethod
@@ -361,8 +366,13 @@ class GraphExporter(object):
                 'color': GraphExporter.get_vertex_color(vertex['type'])}
 
     @staticmethod
-    def get_nx_graph(graph):
-        g = nx.DiGraph()
+    def get_nx_graph(graph, graph_type):
+        if graph_type == GraphType.DIRECTED:
+            g = nx.DiGraph()
+        elif graph_type == GraphType.UNDIRECTED:
+            g = nx.Graph()
+        else:
+            raise Exception()
         for v in range(len(graph.vertices)):
             a = GraphExporter.get_vertex_attributes(graph.vertices[v])
             g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
@@ -389,8 +399,8 @@ class DotExporter(GraphExporter):
 
 class JsonExporter(GraphExporter):
     @staticmethod
-    def export(graph, file_name):
-        g = GraphExporter.get_nx_graph(graph)
+    def export(graph, graph_type, file_name):
+        g = GraphExporter.get_nx_graph(graph, graph_type)
         data = json_graph.adjacency_data(g)
         with open(file_name, 'w') as f:
             json.dump(data, f)
@@ -398,8 +408,8 @@ class JsonExporter(GraphExporter):
 
 class GexfExporter(GraphExporter):
     @staticmethod
-    def export(graph, file_name):
-        g = GraphExporter.get_nx_graph(graph)
+    def export(graph, graph_type, file_name):
+        g = GraphExporter.get_nx_graph(graph, graph_type)
         nx.write_gexf(g, file_name)
 
 
@@ -424,9 +434,9 @@ def main():
 
     f = os.path.join(args.out_dir, fasta_basename)
     out_file_json = f + '_distance.gexf'
-    GexfExporter.export(graph.distance_graph, out_file_json)
+    GexfExporter.export(graph.distance_graph, GraphType.UNDIRECTED, out_file_json)
     out_file_json = f + '_probability.gexf'
-    GexfExporter.export(graph.probability_graph, out_file_json)
+    GexfExporter.export(graph.probability_graph, GraphType.UNDIRECTED, out_file_json)
 
 #    out_file_dot = f + '_distance.dot'
 #    DotExporter.export(graph.distance_graph, out_file_dot)
