@@ -28,14 +28,29 @@ MONTECARLO_4 = 'results/montecarlo_4.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
 SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_1 = 'results/all_clipped_montecarlo_1.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_2 = 'results/all_clipped_montecarlo_2.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_3 = 'results/all_clipped_montecarlo_3.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_4 = 'results/all_clipped_montecarlo_4.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_5 = 'results/all_clipped_montecarlo_5.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_10 = 'results/all_clipped_montecarlo_10.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_15 = 'results/all_clipped_montecarlo_15.txt'
+SIMULATION_EDGE_LIST_SUBSAM_MEAN_2 = 'results/all_clipped_subsam_mean_2.txt'
+SIMULATION_EDGE_LIST_SUBSAM_MEAN_4 = 'results/all_clipped_subsam_mean_4.txt'
+SIMULATION_EDGE_LIST_SUBSAM_MEAN_10 = 'results/all_clipped_subsam_mean_10.txt'
+
 AW = 'results/AW.txt'
 AQ = 'results/AQ.txt'
-#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
+VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
 #VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
 #VERIFIED_OUTBREAKS = ['AW']
-VERIFIED_OUTBREAKS = ['AQ']
+#VERIFIED_OUTBREAKS = ['AQ']
 #GRAPH = MONTECARLO_10
+
 GRAPH = SIMULATION_EDGE_LIST
+SUBSAM_GRAPH = SIMULATION_EDGE_LIST_MONTECARLO_2
+
+
 #GRAPH = AQ
 
 
@@ -63,10 +78,10 @@ class SourceFinder(object):
             weights.append(self.outbreak_graph[e[0]][e[1]]['weight'])
         return statistics.median(weights)
 
-    def get_number_of_recipients(self, vertex):
+    def get_node_degree(self, vertex):
         number_of_recipients = 0
         for e in self.outbreak_graph.edges(vertex):
-            if self.outbreak_graph[e[0]][e[1]]['weight'] < self.outbreak_graph[e[1]][e[0]]['weight']:
+            if self.outbreak_graph[e[0]][e[1]]['weight'] > self.outbreak_graph[e[1]][e[0]]['weight']:
                 number_of_recipients += 1
         return number_of_recipients
 
@@ -111,8 +126,8 @@ class SourceFinder(object):
     def find_source_by_shortest_path_tree(self):
         return self.find_source(self.get_weight_of_shortest_path_tree)
 
-    def find_source_by_number_of_recipients(self):
-        return self.find_source(self.get_number_of_recipients)
+    def find_source_by_star_degree(self):
+        return self.find_source(self.get_node_degree)
 
     def find_source_by_centrality(self):
 #        self.centrality = nx.eigenvector_centrality_numpy(self.outbreak_graph)
@@ -288,8 +303,8 @@ class GraphAnalyzer(object):
         graph.add_weighted_edges_from(outbreak_edges)
         return nx.number_connected_components(graph)
 
-#    def get_true_related_number(self, threshold):
-#        return sum(map(lambda x: x[2] >= threshold, self.unrelated_edges)), len(self.unrelated_edges)
+    def get_true_related_number(self, threshold):
+        return sum(map(lambda x: x[2] >= threshold, self.unrelated_edges)), len(self.unrelated_edges)
 
     def get_false_related_edges(self, threshold):
         return list(filter(lambda x: x[2] <= threshold, self.unrelated_edges))
@@ -450,8 +465,8 @@ def report_source_finding_quality(graph_analyzer, outbreak_verified_sources, sou
             outbreak_source = outbreak_graph.find_source_by_centrality()
         elif source_finding_method == 'star':
             outbreak_source = outbreak_graph.find_source_by_star_median()
-        elif source_finding_method == 'recipients':
-            outbreak_source = outbreak_graph.find_source_by_number_of_recipients()
+        elif source_finding_method == 'star_degree':
+            outbreak_source = outbreak_graph.find_source_by_star_degree()
         print("Source: found - {0}, real - {1}".format(outbreak_source.split('_')[0], outbreak_verified_sources[o]))
         if outbreak_source.split('_')[0] == outbreak_verified_sources[o]:
             found_sources_count += 1
@@ -549,20 +564,23 @@ def export_classifiers(analyzers, file_names):
 
 def main():
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
+    subsampling_analyzer = DirectedGraphAnalyzer(SUBSAM_GRAPH)
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
     min_dist_plus_border_analyzer = UndirectedGraphAnalyzer(MIN_DIST_PLUS_BORDER_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
+#    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
 #    print('Simulations')
-#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'recipients')
+#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star_degree')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star')
-#    report_relatedness(simulation_analyzer, min_dist_analyzer)
+    report_relatedness(simulation_analyzer, min_dist_analyzer)
+    report_relatedness(subsampling_analyzer, min_dist_plus_border_analyzer)
 
-#    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
-#             ['red', 'green', 'blue'], ['min dist', 'min dist + border', 'simulation'], 'roc.png', True)
+#    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer, subsampling_analyzer],
+#             ['red', 'green', 'blue', 'magenta'],
+#             ['MinDist', 'MinDist&Border', 'VOICE', 'VOICE-S'], 'roc_all.png', False)
 
 #    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])

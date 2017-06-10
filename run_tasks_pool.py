@@ -107,19 +107,20 @@ class ProcessPool(object):
 class SimulationManager(object):
     CORES_RESERVE = 4
 
-    def __init__(self, tasks_list, simulations_count, L, cores_number=0):
+    def __init__(self, tasks_list, simulations_count, L, are_samples_normalized, cores_number=0):
         self.simulations_count = simulations_count
         self.L = L
+        self.are_samples_normalized = are_samples_normalized
         self.cores_number = self.get_number_of_available_cores(cores_number)
         self.outbreaks_tasks = self.determine_outbreaks_tasks(tasks_list)
 
-    #TODO:
-    @staticmethod
-    def determine_outbreaks_tasks(tasks_list):
+    def determine_outbreaks_tasks(self, tasks_list):
         outbreak_tasks = list()
         for t in tasks_list:
-#            outbreak_tasks.append(OutbreakTask(t.normalized_in_dir, t.out_dir))
-            outbreak_tasks.append(OutbreakTask(t.in_dir, t.out_dir))
+            if self.are_samples_normalized:
+                outbreak_tasks.append(OutbreakTask(t.normalized_in_dir, t.out_dir))
+            else:
+                outbreak_tasks.append(OutbreakTask(t.in_dir, t.out_dir))
         return outbreak_tasks
 
     @staticmethod
