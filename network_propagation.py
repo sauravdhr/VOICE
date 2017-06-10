@@ -12,12 +12,11 @@ import graph_utils
 
 FILE_NAME = "out/graphs/AD002_unique_1a_72.json"
 LOG_FILE_NAME = "out/graphs/AD002_unique_1a_72.out"
-#LOGGING_PERIOD = 100
 
 
 class Propagator(object):
-    MAX_ORIGINAL_POPULATION = 10
-    MAX_HIDDEN_POPULATION = 1
+    MAX_ORIGINAL_POPULATION = 100
+    MAX_HIDDEN_POPULATION = 10
 
     def __init__(self, network, log_file_name):
         self.files = []
@@ -54,6 +53,7 @@ class Propagator(object):
             self.population[begin_node] = 1
             self.influential_nodes[begin_node] = None
         while True:
+#            print(self.population)
             self.counter += 1
             visited_nodes = []
             for i, influential_node in enumerate(self.influential_nodes):
@@ -85,7 +85,7 @@ class Propagator(object):
 #                self.log_file.write(self.get_population_status_string())
                 break
         # Prevent infinite simulations
-        if self.counter > 3000:
+        if self.counter > 30000:
             print("Exceeded the maximum number of tacts. Stopping the simulation.")
         return self.counter
 
@@ -99,7 +99,9 @@ class Propagator(object):
 
     def are_all_neighbours_visited(self, node):
         for (_, v) in self.network.edges(node):
-            if self.population[v] == 0:
+            max_population = self.MAX_HIDDEN_POPULATION if v > self.observed_seqs_count \
+                             else self.MAX_ORIGINAL_POPULATION
+            if self.population[v] < max_population:
                 return False
         return True
 

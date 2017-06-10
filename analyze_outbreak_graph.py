@@ -72,16 +72,15 @@ class SourceFinder(object):
         return out_edges_weight_sum
 
     def get_median_of_weights_of_edges(self, vertex):
-        out_edges_weight_sum = 0
         weights = list()
         for e in self.outbreak_graph.edges(vertex):
             weights.append(self.outbreak_graph[e[0]][e[1]]['weight'])
         return statistics.median(weights)
 
-    def get_node_degree(self, vertex):
+    def get_number_of_recipients(self, vertex):
         number_of_recipients = 0
         for e in self.outbreak_graph.edges(vertex):
-            if self.outbreak_graph[e[0]][e[1]]['weight'] > self.outbreak_graph[e[1]][e[0]]['weight']:
+            if self.outbreak_graph[e[0]][e[1]]['weight'] < self.outbreak_graph[e[1]][e[0]]['weight']:
                 number_of_recipients += 1
         return number_of_recipients
 
@@ -111,7 +110,6 @@ class SourceFinder(object):
         source = None
         for v in self.outbreak_graph.nodes():
             new_source_cost = f(v)
-#            print('{0} cost: {1}'.format(v, new_source_cost))
             if new_source_cost < source_cost:
                 source = v
                 source_cost = new_source_cost
@@ -126,8 +124,8 @@ class SourceFinder(object):
     def find_source_by_shortest_path_tree(self):
         return self.find_source(self.get_weight_of_shortest_path_tree)
 
-    def find_source_by_star_degree(self):
-        return self.find_source(self.get_node_degree)
+    def find_source_by_number_of_recipients(self):
+        return self.find_source(self.get_number_of_recipients)
 
     def find_source_by_centrality(self):
 #        self.centrality = nx.eigenvector_centrality_numpy(self.outbreak_graph)
@@ -222,17 +220,14 @@ class GraphAnalyzer(object):
             total.append(len(self.outbreaks_nodes_dict[s[:2]]))
         return [float(x[0])/x[1] for x in zip(true_positive, total)]
 
-    def get_zero_type_I_error_thresholds(self):
-        '''
-        min_unrelated_edge_weight = min([e[2] for e in self.unrelated_edges])
-        max_related_less_min_unrelated = 0
-        for e in self.related_edges:
-            if e[2] <= min_unrelated_edge_weight:
-                if e[2] > max_related_less_min_unrelated:
-                    max_related_less_min_unrelated = e[2]
-        return np.mean([min_unrelated_edge_weight, max_related_less_min_unrelated])
-        '''
-        return min([e[2] for e in self.unrelated_edges])
+    def get_threshold_with_no_false_outbreak_linkage(self):
+        threshold = 0
+        for k in self.outbreaks_nodes_dict.keys():
+            if k[:2] != self.UNRELATED:
+                new_threshold = self.find_bridge_length(k)
+                if new_threshold > threshold:
+                    threshold = new_threshold
+        return threshold
 
     @staticmethod
     def get_outbreak_edges(graph, outbreak_name):
@@ -252,16 +247,10 @@ class GraphAnalyzer(object):
                 return e[2]
         return None
 
-    def get_zero_type_II_error_threshold(self):
-        threshold = 0
-        for k in self.outbreaks_nodes_dict.keys():
-            if k[:2] != self.UNRELATED:
-                new_threshold = self.find_bridge_length(k)
-                if new_threshold > threshold:
-                    threshold = new_threshold
-        return threshold
+    def get_threshold_with_no_false_related(self):
+        return min([e[2] for e in self.unrelated_edges])
 
-    def get_zero_type_II_error_threshold_for_pairs(self):
+    def get_threshold_with_no_false_unrelated(self):
         threshold = 0
         for e in self.related_edges:
             w = min(self.graph[e[0]][e[1]]['weight'], self.graph[e[1]][e[0]]['weight'])
@@ -269,24 +258,10 @@ class GraphAnalyzer(object):
                 threshold = w
         return threshold
 
-    def get_min_edge_weight(self, e1, e2):
-        return min(self.graph[e1][e2]['weight'], self.graph[e2][e1]['weight'])
+    def get_relatedness_specificity(self, thr):
+        return 1 - float(len(self.get_false_related_edges(thr))/len(self.unrelated_edges))
 
-    def get_triangle_threshold(self):
-        threshold = 10000000
-        for e in self.unrelated_edges:
-            for n in self.graph.nodes():
-                w = max(self.get_min_edge_weight(e[0], e[1]),
-                        self.get_min_edge_weight(e[0], n),
-                        self.get_min_edge_weight(n, e[1]))
-            if w < threshold:
-                threshold = w
-        return threshold
-
-    def get_false_positive_rate_pairs(self, thr):
-        return len(self.get_false_related_edges(thr))/len(self.unrelated_edges)
-
-    def get_true_positive_rate_pairs(self, thr):
+    def get_relatedness_sensitivity(self, thr):
         return len(self.get_true_related_edges(thr))/len(self.related_edges)
 
     def get_number_of_clusters(self, threshold):
@@ -386,8 +361,8 @@ def get_rocs(analyzers):
         thr = 0
         tpr = 0
         while tpr != 1:
-            tpr = analyzers[i].get_true_positive_rate_pairs(thr)
-            fpr = analyzers[i].get_false_positive_rate_pairs(thr)
+            tpr = analyzers[i].get_relatedness_sensitivity(thr)
+            fpr = analyzers[i].get_relatedness_specificity(thr)
             x.append(fpr)
             y.append(tpr)
             thr += 1
@@ -416,11 +391,11 @@ def main0():
 #    args = parse_arguments()
     simulation_analyzer = DirectedGraphAnalyzer(GRAPH)
     min_dist_analyzer = UndirectedGraphAnalyzer(MIN_DIST_EDGE_LIST)
-    print(simulation_analyzer.get_zero_type_I_error_thresholds())
-    print(simulation_analyzer.get_zero_type_II_error_threshold())
+    print(simulation_analyzer.get_threshold_with_no_false_related())
+    print(simulation_analyzer.get_threshold_with_no_false_outbreak_linkage())
 
-    print(min_dist_analyzer.get_zero_type_I_error_thresholds())
-    print(min_dist_analyzer.get_zero_type_II_error_threshold())
+    print(min_dist_analyzer.get_threshold_with_no_false_related())
+    print(min_dist_analyzer.get_threshold_with_no_false_outbreak_linkage())
 
     y1, binEdges1 = np.histogram([e[2] for e in simulation_analyzer.unrelated_edges], 100, normed=False)
     y2, binEdges2 = np.histogram([e[2] for e in simulation_analyzer.related_edges], 40, normed=False)
@@ -491,11 +466,11 @@ def report_direction_finding_quality(simulation_analyzer, outbreak_verified_sour
 
 
 def report_relatedness(simulation_analyzer, min_dist_analyzer):
-    zero_unrelated_thr_simulation = simulation_analyzer.get_zero_type_I_error_thresholds()
-    zero_broken_outbreaks_thr_simulation = simulation_analyzer.get_zero_type_II_error_threshold()
+    zero_unrelated_thr_simulation = simulation_analyzer.get_threshold_with_no_false_related()
+    zero_broken_outbreaks_thr_simulation = simulation_analyzer.get_threshold_with_no_false_outbreak_linkage()
 
-    zero_unrelated_thr_min_dist = min_dist_analyzer.get_zero_type_I_error_thresholds()
-    zero_broken_outbreaks_thr_min_dist = min_dist_analyzer.get_zero_type_II_error_threshold()
+    zero_unrelated_thr_min_dist = min_dist_analyzer.get_threshold_with_no_false_related()
+    zero_broken_outbreaks_thr_min_dist = min_dist_analyzer.get_threshold_with_no_false_outbreak_linkage()
 
     print("-------")
     print("Thresholds for simulation:")
@@ -585,13 +560,8 @@ def main():
 #    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
 
-#    thrII = min_dist_analyzer.get_zero_type_II_error_threshold_for_pairs()
-#    print(thrII)
-#    print(min_dist_analyzer.get_false_positive_rate_pairs(10))
-#    print(min_dist_analyzer.get_true_positive_rate_pairs(10))
-
-#    print('Min dist')
-#    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')
+    print('Min dist')
+    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')
 
 
 if __name__ == '__main__':

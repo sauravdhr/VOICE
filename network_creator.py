@@ -12,19 +12,20 @@ import json
 import math
 import os
 import sys
+import argparse
 from enum import Enum
 
 import networkx as nx
 from Bio import SeqIO
-from graphviz import Digraph
+#from graphviz import Digraph
 from networkx.readwrite import json_graph
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import shortest_path
 
 from hamming_dist_graph import hamming_distance
 
-MUTATION_PROBABILITY = 0.03
-OUT_DIR = "out/graphs"
+MUTATION_PROBABILITY = 0.01
 
 
 def represents_int(s):
@@ -227,6 +228,7 @@ class DistanceGraphBuilder(object):
     def infer_medians(sequences):
         return get_sequence_sets_difference(filter_repeated_sequences(find_all_medians(sequences)), sequences)
 
+    '''
     @staticmethod
     def construct_minimal_connected_graph_matrix(distance_matrix):
         mst = minimum_spanning_tree(csr_matrix(distance_matrix))
@@ -236,6 +238,26 @@ class DistanceGraphBuilder(object):
             for j, length in enumerate(row):
                 if length and length > min_length:
                     minimal_connected_graph_matrix[i, j] = None
+        return minimal_connected_graph_matrix
+    '''
+
+    @staticmethod
+    def construct_minimal_connected_graph_matrix(distance_matrix):
+        mst = minimum_spanning_tree(csr_matrix(distance_matrix))
+        _, predecessors = shortest_path(mst, directed=False, return_predecessors=True)
+        minimal_connected_graph_matrix = copy.deepcopy(distance_matrix)
+
+        for i, row in enumerate(minimal_connected_graph_matrix):
+            for j, weight in enumerate(row):
+                if weight:
+                    path = [i]
+                    while path[-1] != j:
+                        path.append(predecessors[j, path[-1]])
+                    path_edges = [(path[v], path[v + 1]) for v in range(len(path) - 1)]
+                    path_weights = [distance_matrix[u, v] for u, v in path_edges]
+                    max_weight = max(path_weights)
+                    if weight > max_weight:
+                        minimal_connected_graph_matrix[i, j] = None
         return minimal_connected_graph_matrix
 
     def get_minimal_connected_graph(self):
@@ -307,9 +329,14 @@ class ProbabilityGraphBuilder(object):
         return probability_graph
 
 
+class GraphType(object):
+    DIRECTED = 0
+    UNDIRECTED = 1
+
+
 class GraphExporter(object):
     @staticmethod
-    def export(graph, file_name):
+    def export(graph, graph_type, file_name):
         pass
 
     @staticmethod
@@ -338,7 +365,23 @@ class GraphExporter(object):
                 'type': GraphExporter.get_vertex_type(vertex['type']),
                 'color': GraphExporter.get_vertex_color(vertex['type'])}
 
+    @staticmethod
+    def get_nx_graph(graph, graph_type):
+        if graph_type == GraphType.DIRECTED:
+            g = nx.DiGraph()
+        elif graph_type == GraphType.UNDIRECTED:
+            g = nx.Graph()
+        else:
+            raise Exception()
+        for v in range(len(graph.vertices)):
+            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
+            g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
+        for v1 in range(len(graph.edges)):
+            for (v2, properties) in graph.edges[v1]:
+                g.add_edge(v1, v2, weight=properties['weight'])
+        return g
 
+'''
 class DotExporter(GraphExporter):
     @staticmethod
     def export(graph, file_name):
@@ -351,44 +394,55 @@ class DotExporter(GraphExporter):
                 dot.edge(str(v1), str(v2), weight=str(properties['weight']))
         with open(file_name, 'w') as f:
             f.write(dot.source)
+'''
 
 
 class JsonExporter(GraphExporter):
     @staticmethod
-    def export(graph, file_name):
-        g = nx.DiGraph()
-        for v in range(len(graph.vertices)):
-            a = GraphExporter.get_vertex_attributes(graph.vertices[v])
-            g.add_node(v, label=a['label'], color=a['color'], type=a['type'])
-        for v1 in range(len(graph.edges)):
-            for (v2, properties) in graph.edges[v1]:
-                g.add_edge(v1, v2, weight=properties['weight'])
+    def export(graph, graph_type, file_name):
+        g = GraphExporter.get_nx_graph(graph, graph_type)
         data = json_graph.adjacency_data(g)
         with open(file_name, 'w') as f:
             json.dump(data, f)
 
 
-def main(fasta_name, search_for_medians):
-    sequences_set = parse_fasta(fasta_name)
+class GexfExporter(GraphExporter):
+    @staticmethod
+    def export(graph, graph_type, file_name):
+        g = GraphExporter.get_nx_graph(graph, graph_type)
+        nx.write_gexf(g, file_name)
+
+
+def parse_arguments():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-i', dest='input_fasta', type=str, required=True)
+    argparser.add_argument('-o', dest='out_dir', type=str, required=True)
+    return argparser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+    sequences_set = parse_fasta(args.input_fasta)
 
     L = get_count_of_heterogeneous_positions(sequences_set)
     print(L)
 
     graph = ProbabilityGraphBuilder(DistanceGraphBuilder(
-        sequences_set, search_for_medians).get_graph(), L)
+        sequences_set, False).get_minimal_connected_graph(), L)
 
-    fasta_basename = os.path.splitext(os.path.basename(fasta_name))[0]
+    fasta_basename = os.path.splitext(os.path.basename(args.input_fasta))[0]
 
-    f = os.path.join(OUT_DIR, fasta_basename)
-    out_file_json = f + '.json'
-    JsonExporter.export(graph.probability_graph, out_file_json)
-    out_file_dot = f + '_distance.dot'
-    DotExporter.export(graph.distance_graph, out_file_dot)
-    out_file_dot = f + '_probability.dot'
-    DotExporter.export(graph.probability_graph, out_file_dot)
+    f = os.path.join(args.out_dir, fasta_basename)
+    out_file_json = f + '_distance.gexf'
+    GexfExporter.export(graph.distance_graph, GraphType.UNDIRECTED, out_file_json)
+    out_file_json = f + '_probability.gexf'
+    GexfExporter.export(graph.probability_graph, GraphType.UNDIRECTED, out_file_json)
+
+#    out_file_dot = f + '_distance.dot'
+#    DotExporter.export(graph.distance_graph, out_file_dot)
+#    out_file_dot = f + '_probability.dot'
+#    DotExporter.export(graph.probability_graph, out_file_dot)
 
 
 if __name__ == "__main__":
-    fasta_name = sys.argv[1]
-    search_for_medians = False if len(sys.argv) <= 2 else True
-    main(fasta_name, search_for_medians)
+    main()
