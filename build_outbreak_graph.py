@@ -107,8 +107,8 @@ def parse_arguments():
                         help='Folder with simulation results.')
     parser.add_argument('-o', dest='graph_base_name', type=str, default=None,
                         help='Name of base of out file where json graph will be written.')
-    parser.add_argument('-m', dest='k_max', type=str, default=K_MAX_DEFAULT,
-                        help='count of sequences for Monte-Carlo normalization')
+    parser.add_argument('-m', dest='k_max', type=int, default=K_MAX_DEFAULT,
+                        help='Count of sequences for Monte-Carlo normalization.')
     return parser.parse_args()
 
 

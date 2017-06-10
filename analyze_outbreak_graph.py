@@ -27,13 +27,14 @@ MONTECARLO_10 = 'results/montecarlo_10.txt'
 MONTECARLO_4 = 'results/montecarlo_4.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
-SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
+#SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
+SIMULATION_EDGE_LIST = 'data/thinned_mc_4.txt'
 AW = 'results/AW.txt'
 AQ = 'results/AQ.txt'
-#VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
+VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ']
 #VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ']
 #VERIFIED_OUTBREAKS = ['AW']
-VERIFIED_OUTBREAKS = ['AQ']
+#VERIFIED_OUTBREAKS = ['AQ']
 #GRAPH = MONTECARLO_10
 GRAPH = SIMULATION_EDGE_LIST
 #GRAPH = AQ
@@ -244,10 +245,13 @@ class GraphAnalyzer(object):
         return threshold
 
     def get_relatedness_specificity(self, thr):
-        return 1 - float(len(self.get_false_related_edges(thr))/len(self.unrelated_edges))
+        return 1 - float(self.get_false_related_count(thr)/len(self.unrelated_edges))
 
     def get_relatedness_sensitivity(self, thr):
         return len(self.get_true_related_edges(thr))/len(self.related_edges)
+
+    def get_false_related_count(self, thr):
+        return len(self.get_false_related_edges(thr))
 
     def get_number_of_clusters(self, threshold):
         clusters_count = 0
@@ -292,7 +296,7 @@ class DirectedGraphAnalyzer(GraphAnalyzer):
         nodes = graph.nodes()
         for i in range(len(nodes)-1):
             for j in range(i+1, len(nodes)):
-                print("{0},{1}".format(nodes[i], nodes[j]))
+#                print("{0},{1}".format(nodes[i], nodes[j]))
                 transmission_edges.append((nodes[i], nodes[j], graph[nodes[i]][nodes[j]]['weight'])
                                           if graph[nodes[i]][nodes[j]]['weight'] < graph[nodes[j]][nodes[i]]['weight']
                                           else (nodes[j], nodes[i], graph[nodes[j]][nodes[i]]['weight']))
@@ -466,11 +470,11 @@ def report_relatedness(simulation_analyzer, min_dist_analyzer):
     print("-------")
 
     number_of_clusters_simulation = simulation_analyzer.get_number_of_clusters(zero_unrelated_thr_simulation)
-    true_related_number_simulation = simulation_analyzer.get_true_related_number(zero_broken_outbreaks_thr_simulation)
+    false_related_simulation = simulation_analyzer.get_false_related_count(zero_broken_outbreaks_thr_simulation)
     related_error_simulation = simulation_analyzer.get_related_error(zero_unrelated_thr_simulation)
 
     number_of_clusters_min_dist = min_dist_analyzer.get_number_of_clusters(zero_unrelated_thr_min_dist)
-    true_related_number_min_dist = min_dist_analyzer.get_true_related_number(zero_broken_outbreaks_thr_min_dist)
+    false_related_min_dist = min_dist_analyzer.get_false_related_count(zero_broken_outbreaks_thr_min_dist)
     related_error_min_dist = min_dist_analyzer.get_related_error(zero_unrelated_thr_min_dist)
 
     print("#######")
@@ -484,10 +488,8 @@ def report_relatedness(simulation_analyzer, min_dist_analyzer):
     print('Number of clusters with thr {0}: {1}'.format(zero_unrelated_thr_simulation,
                                                         number_of_clusters_simulation))
     print("-------")
-    print('Number of true positive related pairs with thr {0}: {1} of {2}'.format(zero_broken_outbreaks_thr_simulation,
-                                                                                  true_related_number_simulation[0],
-                                                                                  true_related_number_simulation[1]))
-    print("True rate: {0}".format(float(true_related_number_simulation[0]) / true_related_number_simulation[1]))
+    print('False related for simulation  with thr {0}: {1}'.format(zero_broken_outbreaks_thr_simulation,
+                                                            false_related_simulation))
     print("#######")
     print('Relatedness correctness for min dist method:')
     print("#######")
@@ -499,11 +501,8 @@ def report_relatedness(simulation_analyzer, min_dist_analyzer):
     print('Number of clusters with thr {0}: {1}'.format(zero_unrelated_thr_min_dist,
                                                         number_of_clusters_min_dist))
     print("-------")
-    print('Number of true positive related pairs with thr {0}: {1} of {2}'.format(zero_broken_outbreaks_thr_min_dist,
-                                                                                  true_related_number_min_dist[0],
-                                                                                  true_related_number_min_dist[1]))
-
-    print("True rate: {0}".format(float(true_related_number_min_dist[0]) / true_related_number_min_dist[1]))
+    print('False related MinDist with thr {0}: {1}'.format(zero_broken_outbreaks_thr_min_dist,
+                                                                           false_related_min_dist))
     print("-------")
 
     print("Number of unrelated samples: {0}".format(len(simulation_analyzer.outbreaks_nodes_dict['XX'])))
@@ -532,7 +531,7 @@ def main():
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star')
-#    report_relatedness(simulation_analyzer, min_dist_analyzer)
+    report_relatedness(simulation_analyzer, min_dist_analyzer)
 
 #    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #             ['red', 'green', 'blue'], ['min dist', 'min dist + border', 'simulation'], 'roc.png', True)
@@ -540,8 +539,8 @@ def main():
 #    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
 
-    print('Min dist')
-    report_source_finding_quality(min_dist_analyzer, outbreak_verified_sources, 'star')
+    print('Simulation:')
+    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
 
 
 if __name__ == '__main__':
