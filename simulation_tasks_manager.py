@@ -68,6 +68,7 @@ class TasksManager(object):
         self.tasks_file_name = tasks_file_name
         self.tasks = None
         self.out_dir = out_dir
+        self.are_samples_normalized = False
 
     def init_tasks(self):
         self.tasks = list()
@@ -84,11 +85,13 @@ class TasksManager(object):
             return OutbreakTask(a[1], os.path.join(out_dir, os.path.basename(os.path.normpath(a[1]))))
 
     def normalize_populations(self, k_min):
+        self.are_samples_normalized = True
         for t in self.tasks:
             t.normalize_samples(k_min)
 
     def run_simulations(self, simulations_count, L, cores_count=None):
         run_simulation_tasks_manager = run_tasks_pool.SimulationManager(self.tasks,
                                                                         simulations_count, L,
+                                                                        self.are_samples_normalized,
                                                                         cores_count if cores_count else CORES_COUNT)
         run_simulation_tasks_manager.run()

@@ -38,12 +38,12 @@ class SimulationResultsParser(ResultsParser):
             for l in f.readlines():
                 c = l.split()
                 self.distances[c[0]].append(int(c[2]))
-        return [(self.nodes[0], self.nodes[1], statistics.median(self.distances[self.nodes[1]])),
-                (self.nodes[1], self.nodes[0], statistics.median(self.distances[self.nodes[0]]))]
+        return [(self.nodes[0], self.nodes[1], statistics.mean(self.distances[self.nodes[1]])),
+                (self.nodes[1], self.nodes[0], statistics.mean(self.distances[self.nodes[0]]))]
 
 
 class SimulationResultsParserMonteCarlo(ResultsParser):
-    MONTE_CARLO_RUNS = 501
+    MONTE_CARLO_RUNS = 51
 
     def __init__(self, dir, pair_name, k_max):
         super(SimulationResultsParserMonteCarlo, self).__init__(dir, pair_name)
@@ -91,11 +91,12 @@ def build_graph(outbreak_dir_name, k_max):
     out_dir = os.path.join(outbreak_dir_name, 'out')
     pairs = os.listdir(out_dir)
     edges_list = list()
-    for pair in pairs:
+    for i in range(len(pairs)):
+        print("Pair processing: {0} of {1}".format(i+1, len(pairs)))
         if not k_max:
-            pair_parser = SimulationResultsParser(out_dir, pair)
+            pair_parser = SimulationResultsParser(out_dir, pairs[i])
         else:
-            pair_parser = SimulationResultsParserMonteCarlo(out_dir, pair, k_max)
+            pair_parser = SimulationResultsParserMonteCarlo(out_dir, pairs[i], k_max)
         edges_list.extend(pair_parser.edges)
     graph.add_weighted_edges_from(edges_list)
     return graph

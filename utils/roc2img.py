@@ -102,8 +102,8 @@ def SaveROCCurvePlot(plt, fname, randomline=True):
         x = [0.0, 1.0]
         plt.plot(x, x, linestyle='dashed', color='red', linewidth=2)
 
-    plt.xlim(0.0, 1.0)
-    plt.ylim(0.0, 1.0)
+    plt.xlim(0.0, 0.27)
+    plt.ylim(0.88, 1.0)
     plt.legend(fontsize=10, loc='best')
     plt.tight_layout()
     plt.savefig(fname)
