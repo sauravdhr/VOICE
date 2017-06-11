@@ -92,10 +92,10 @@ def build_graph(outbreak_dir_name, k_max):
     pairs = os.listdir(out_dir)
     edges_list = list()
     for i in range(len(pairs)):
-        print("Pair processing: {0} of {1}".format(i+1, len(pairs)))
         if not k_max:
             pair_parser = SimulationResultsParser(out_dir, pairs[i])
         else:
+            print("Pair processing: {0} of {1}".format(i + 1, len(pairs)))
             pair_parser = SimulationResultsParserMonteCarlo(out_dir, pairs[i], k_max)
         edges_list.extend(pair_parser.edges)
     graph.add_weighted_edges_from(edges_list)

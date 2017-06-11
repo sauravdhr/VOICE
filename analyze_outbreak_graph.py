@@ -28,17 +28,11 @@ MONTECARLO_4 = 'results/montecarlo_4.txt'
 SIMULATION_EDGE_LIST_FILTERES = 'data/all_clipped_filtered_simulation.txt'
 SIMULATION_EDGE_LIST_BORDER_CONSENSUS = 'data/all_clipped_border_consensus_simulation_graph.txt'
 #SIMULATION_EDGE_LIST = 'data/all_clipped_simulation.txt'
-SIMULATION_EDGE_LIST = 'data/thinned_mc_4.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_1 = 'results/all_clipped_montecarlo_1.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_2 = 'results/all_clipped_montecarlo_2.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_3 = 'results/all_clipped_montecarlo_3.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_4 = 'results/all_clipped_montecarlo_4.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_5 = 'results/all_clipped_montecarlo_5.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_10 = 'results/all_clipped_montecarlo_10.txt'
-SIMULATION_EDGE_LIST_MONTECARLO_15 = 'results/all_clipped_montecarlo_15.txt'
-SIMULATION_EDGE_LIST_SUBSAM_MEAN_2 = 'results/all_clipped_subsam_mean_2.txt'
-SIMULATION_EDGE_LIST_SUBSAM_MEAN_4 = 'results/all_clipped_subsam_mean_4.txt'
-SIMULATION_EDGE_LIST_SUBSAM_MEAN_10 = 'results/all_clipped_subsam_mean_10.txt'
+SIMULATION_EDGE_LIST = 'data/thinned_wo_norm.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_4 = 'data/thinned_mc_4.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_5 = 'data/thinned_mc_5.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_6 = 'data/thinned_mc_6.txt'
+SIMULATION_EDGE_LIST_MONTECARLO_8 = 'data/thinned_mc_8.txt'
 
 AW = 'results/AW.txt'
 AQ = 'results/AQ.txt'
@@ -49,7 +43,7 @@ VERIFIED_OUTBREAKS = ['AA', 'AC', 'AI', 'AJ', 'AW', 'BA', 'BB', 'BC', 'BJ', 'AQ'
 #GRAPH = MONTECARLO_10
 
 GRAPH = SIMULATION_EDGE_LIST
-SUBSAM_GRAPH = SIMULATION_EDGE_LIST_MONTECARLO_2
+SUBSAM_GRAPH = SIMULATION_EDGE_LIST_MONTECARLO_4
 
 
 #GRAPH = AQ
@@ -81,7 +75,7 @@ class SourceFinder(object):
     def get_number_of_recipients(self, vertex):
         number_of_recipients = 0
         for e in self.outbreak_graph.edges(vertex):
-            if self.outbreak_graph[e[0]][e[1]]['weight'] < self.outbreak_graph[e[1]][e[0]]['weight']:
+            if self.outbreak_graph[e[0]][e[1]]['weight'] > self.outbreak_graph[e[1]][e[0]]['weight']:
                 number_of_recipients += 1
         return number_of_recipients
 
@@ -363,8 +357,8 @@ def get_rocs(analyzers):
         thr = 0
         tpr = 0
         while tpr != 1:
+            fpr = 1 - analyzers[i].get_relatedness_specificity(thr)
             tpr = analyzers[i].get_relatedness_sensitivity(thr)
-            fpr = analyzers[i].get_relatedness_specificity(thr)
             x.append(fpr)
             y.append(tpr)
             thr += 1
@@ -541,13 +535,13 @@ def main():
     min_dist_plus_border_analyzer = UndirectedGraphAnalyzer(MIN_DIST_PLUS_BORDER_EDGE_LIST)
     outbreak_verified_sources = get_outbreak_verified_sources(SOURCES_FILE_NAME)
 
-#    report_direction_finding_quality(simulation_analyzer, outbreak_verified_sources)
+    report_direction_finding_quality(subsampling_analyzer, outbreak_verified_sources)
 #    print('Simulations')
-#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star_degree')
-#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
+    report_source_finding_quality(subsampling_analyzer, outbreak_verified_sources, 'spt')
+#    report_source_finding_quality(subsampling_analyzer, outbreak_verified_sources, 'spt')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'centrality')
 #    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'star')
-    report_relatedness(simulation_analyzer, min_dist_analyzer)
+#    report_relatedness(subsampling_analyzer, min_dist_analyzer)
 #    draw_ROC([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer, subsampling_analyzer],
 #             ['red', 'green', 'blue', 'magenta'],
 #             ['MinDist', 'MinDist&Border', 'VOICE', 'VOICE-S'], 'roc_all.png', False)
@@ -555,8 +549,8 @@ def main():
 #    export_classifiers([min_dist_analyzer, min_dist_plus_border_analyzer, simulation_analyzer],
 #                       ['min_dist.csv', 'min_dist_plus_border.csv', 'simulation.csv'])
 
-    print('Simulation:')
-    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
+#    print('Simulation:')
+#    report_source_finding_quality(simulation_analyzer, outbreak_verified_sources, 'spt')
 
 
 if __name__ == '__main__':
